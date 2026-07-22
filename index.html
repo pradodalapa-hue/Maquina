@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" content="#020617">
     <title>HELENA PDV v10.0 - HARMONY MATRIX</title>
-              
+                    
     <!-- Dependências Locais/Offline para Geração de QRCode e Captura -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -703,7 +703,7 @@
 
     <main>
         <div id="interaction-deck">
-                         
+                                      
             <!-- CONSOLE DE RESPOSTA DA HELENA -->
             <div class="response-container">
                 <div id="response-bubble">Sistemas administrados pelo DBJS e alimentados pelo JSLN, Mestre José. HELENA PDV v10.0 Ativa.  Como usar o PDV por voz ou texto: - Fale ou digite: "nova venda [produto] [método]" - Comando Direto POS: "cobrar [valor]" (Ex: "cobrar 35 reais")  O motor DBJS gerencia o estado operacional gravando automaticamente sobre a estrutura do JSLN e sincronizando com o Service Worker em segundo plano.</div>
@@ -781,7 +781,7 @@
     <!-- ==================== CAMADA SMART POS V46 GIGANTE ==================== -->
     <div id="pos-layer">
         <div class="smart-pos">
-                         
+                                      
             <!-- Cabeçalho Superior da Máquina com Voltar -->
             <div style="display: flex; justify-content: space-between; align-items: center; width:100%;">
                 <button class="btn-pos-voltar" onclick="fecharPOS()">⬅ Voltar</button>
@@ -878,6 +878,17 @@
 
     <!-- ==================== MOTOR DBJS INJETADO NO KERNEL (100% OFF-CORS) ==================== -->
     <script>
+        // FUNÇÃO DE NORMALIZAÇÃO GLOBAL PARA COMBATER QUALQUER ERRO DE MAIÚSCULA/MINÚSCULA/ACENTO/ESPAÇOS
+        function normalizarTexto(txt) {
+            if (!txt) return "";
+            return txt.toString().toLowerCase()
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "") // Remove acentos completamente
+                .replace(/[^a-z0-9\s]/g, "")     // Remove qualquer pontuação, hífen, ponto final ou vírgula invisível
+                .replace(/\s+/g, " ")            // Transforma múltiplos espaços em apenas um
+                .trim();
+        }
+
         const DBJS = (() => {
             const STORAGE_KEY = 'helena_cerebro_json';
             let JSLN_DATABASE = { produtos: [], transacoes: [] };
@@ -923,7 +934,7 @@
                 getData() { return JSLN_DATABASE; },
                 cadastrarOuAtualizarProduto(nome, quantidade, valor) {
                     const nomeFormatado = nome.toUpperCase().trim();
-                    const existente = JSLN_DATABASE.produtos.find(p => p.nome === nomeFormatado);
+                    const existente = JSLN_DATABASE.produtos.find(p => normalizarTexto(p.nome) === normalizarTexto(nomeFormatado));
                     if (existente) {
                         existente.quantidade += quantidade;
                         existente.valor = valor;
@@ -940,8 +951,14 @@
                     this.salvar();
                 },
                 processarVenda(prodBuscado, metodo) {
-                    const termo = prodBuscado.toUpperCase().trim();
-                    const produto = JSLN_DATABASE.produtos.find(p => p.nome === termo || p.nome.includes(termo));
+                    const termoNorm = normalizarTexto(prodBuscado);
+                    
+                    // Busca inteligente com normalização dupla (ignora maiúsculas, minúsculas, acentos e pontuações)
+                    const produto = JSLN_DATABASE.produtos.find(p => {
+                        const nomeNorm = normalizarTexto(p.nome);
+                        return nomeNorm === termoNorm || nomeNorm.includes(termoNorm) || termoNorm.includes(nomeNorm);
+                    });
+
                     if (!produto) return { sucesso: false, tipo: 'NAO_ENCONTRADO' };
                     if (produto.quantidade < 1) return { sucesso: false, tipo: 'ESGOTADO', produto: produto.nome };
 
@@ -1139,7 +1156,78 @@
         function removerProdutoEstoque(index) {
             DBJS.removerProduto(index);
             atualizarTelas();
-            triggerSpeech("Produto deletado.");
+            triggerSpeech("Produto deletedo.");
+        }
+
+        // PARSER DINÂMICO DE COMANDOS JDP (MÁXIMA TOLERÂNCIA A MAIÚSCULAS/MINÚSCULAS/CONECTORES)
+        function processarComandoDinamico(queryOriginal) {
+            const queryNorm = normalizarTexto(queryOriginal);
+
+            // 1. GATILHO POS: cobrar [valor] (Ex: "cobra 35 reais", "COBRAR 35", "cobrar 35.50")
+            if (queryNorm.startsWith("cobrar") || queryNorm.startsWith("cobra")) {
+                let numMatch = queryOriginal.match(/\d+([.,]\d+)?/);
+                if (numMatch) {
+                    let valorFloat = parseFloat(numMatch[0].replace(',', '.'));
+                    if (!isNaN(valorFloat) && valorFloat > 0) {
+                        return { tipo: 'COBRAR', valor: valorFloat };
+                    }
+                }
+            }
+
+            // 2. GATILHO DE VENDA (Ex: "nova venda de carne na chapa no pix", "anota carne na chapa dinheiro", "carne na chapa pix")
+            // Identifica o método de pagamento primeiro em qualquer lugar da string
+            let metodo = "";
+            const metodosSuportados = ["pix", "dinheiro", "cartao", "credito", "debito"];
+            for (let m of metodosSuportados) {
+                if (queryNorm.includes(m)) {
+                    metodo = m;
+                    break;
+                }
+            }
+
+            if (metodo) {
+                // Remove prefixos comuns de ativação do início da frase
+                let prodStr = queryNorm;
+                const prefixos = [
+                    "nova venda de", "novo venda de", "nova venda", "novo venda", "venda de", "venda", 
+                    "anota venda de", "anota venda", "anota de", "anota", 
+                    "anotar venda de", "anotar venda", "anotar",
+                    "registra venda de", "registra venda", "registra",
+                    "registrar venda de", "registrar venda", "registrar",
+                    "registre venda de", "registre venda", "registre"
+                ];
+
+                for (let pref of prefixos) {
+                    if (prodStr.startsWith(pref)) {
+                        prodStr = prodStr.substring(pref.length).trim();
+                        break;
+                    }
+                }
+
+                // Remove o método de pagamento e conectores anteriores do final da frase
+                const sufixos = [
+                    " no " + metodo, " na " + metodo, " em " + metodo, " com " + metodo, " " + metodo,
+                    "no " + metodo, "na " + metodo, "em " + metodo, "com " + metodo
+                ];
+
+                for (let suf of sufixos) {
+                    if (prodStr.endsWith(suf)) {
+                        prodStr = prodStr.substring(0, prodStr.length - suf.length).trim();
+                        break;
+                    }
+                }
+
+                // Limpa conectores residuais que possam ter sobrado no início do produto (ex: "de carne na chapa" -> "carne na chapa")
+                if (prodStr.startsWith("de ") || prodStr.startsWith("do ") || prodStr.startsWith("da ")) {
+                    prodStr = prodStr.substring(3).trim();
+                }
+
+                if (prodStr) {
+                    return { tipo: 'VENDA', produto: prodStr, metodo: metodo };
+                }
+            }
+
+            return null; // Comando não mapeado
         }
 
         // CHAT PROCESSADOR HELENA
@@ -1154,71 +1242,54 @@
             const responseBubble = document.getElementById('response-bubble');
             responseBubble.innerHTML = "...";
 
-            // BLINDAGEM MÁXIMA DE ÁUDIO: Remove acentos e qualquer pontuação residual do áudio (ex: pontos finais inseridos pelo Android)
-            const cleanQuery = queryOriginal.toLowerCase()
-                .normalize("NFD")
-                .replace(/[\u0300-\u036f]/g, "")
-                .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?]/g, "") // Limpa pontuações inseridas pelo reconhecimento de voz
-                .trim();
+            // Executa o Parser Dinâmico Blindado
+            const comando = processarComandoDinamico(queryOriginal);
 
-            // GATILHO: cobrar [valor]
-            const regexCobrar = /^cobrar\s+(.+)$/i;
-            const matchCobrar = cleanQuery.match(regexCobrar);
-            
-            if (matchCobrar) {
-                let valorTexto = matchCobrar[1].trim();
-                let numMatch = valorTexto.match(/\d+([.,]\d+)?/);
-                if (numMatch) {
-                    let valorFloat = parseFloat(numMatch[0].replace(',', '.'));
-                    if (!isNaN(valorFloat) && valorFloat > 0) {
-                        let cents = Math.round(valorFloat * 100).toString();
-                        abrirPOS();
-                        montante = cents;
-                        status = "DIG";
-                        atualizarVisorPOS();
-                        gerarPagamentoPOS(); // Auto gera o QR Code na tela
-                        triggerSpeech(`Cobrando R$ ${valorFloat.toFixed(2).replace('.', ',')} na máquina.`);
-                        return;
+            if (comando) {
+                if (comando.tipo === 'COBRAR') {
+                    let cents = Math.round(comando.valor * 100).toString();
+                    abrirPOS();
+                    montante = cents;
+                    status = "DIG";
+                    atualizarVisorPOS();
+                    gerarPagamentoPOS(); // Auto gera o QR Code na tela
+                    triggerSpeech(`Cobrando R$ ${comando.valor.toFixed(2).replace('.', ',')} na máquina.`);
+                    return;
+                }
+
+                if (comando.tipo === 'VENDA') {
+                    let prodBuscado = comando.produto.toUpperCase();
+                    let metodo = comando.metodo.toUpperCase();
+
+                    if (metodo === "CREDITO" || metodo === "DEBITO") metodo = "CARTÃO";
+
+                    const resultado = DBJS.processarVenda(prodBuscado, metodo);
+                                    
+                    if (resultado.sucesso) {
+                        const t = resultado.transacao;
+                        const prod = resultado.produto;
+                        const respostaTxt = `[VENDA PROCESSADA]\n\n📦 Produto: ${prod.nome}\n📉 Estoque: ${prod.quantidade + 1} ➔ ${prod.quantidade}\n💵 Valor: R$ ${prod.valor.toFixed(2)}\n⚡ Pagamento: ${t.metodoPagamento}\n🕒 Data/Hora: ${t.data} - ${t.hora}`;
+                                                
+                        triggerSpeech(`Vendido um ${prod.nome} no ${t.metodoPagamento.toLowerCase()}. Estoque atualizado para ${prod.quantidade}.`);
+                        renderInstantText(respostaTxt, 'response-bubble');
+                    } else if (resultado.tipo === 'ESGOTADO') {
+                        const respostaTxt = `[ALERTA ESTOQUE]\n\nEstoque esgotado para o produto: ${resultado.produto}.`;
+                        triggerSpeech(`Atenção, Mestre. Estoque esgotado para ${resultado.produto}.`);
+                        renderInstantText(respostaTxt, 'response-bubble');
+                    } else {
+                        const respostaTxt = `[PRODUTO NÃO ENCONTRADO]\n\nO produto "${prodBuscado}" não está cadastrado no sistema.`;
+                        triggerSpeech(`Mestre, o produto ${prodBuscado} não foi localizado no estoque.`);
+                        renderInstantText(respostaTxt, 'response-bubble');
                     }
+                    atualizarTelas();
+                    return;
                 }
-                triggerSpeech("Mestre, não compreendi o valor a ser cobrado.");
-                return;
             }
 
-            // GATILHO DE VENDAS FLEXÍVEL (Aceita: "nova venda", "anota venda", "anota vendas", "venda", "registrar venda", "anotar venda")
-            const regexVenda = /^(?:nova\s+|novo\s+|anota\s+|anotar\s+|registra\s+|registrar\s+)?venda[s]?\s+(.+?)\s+(pix|dinheiro|cartao|credito|debito)$/i;
-            const match = cleanQuery.match(regexVenda);
-
-            if (match) {
-                let prodBuscado = match[1].trim().toUpperCase();
-                let metodo = match[2].toUpperCase();
-
-                if (metodo === "CREDITO" || metodo === "DEBITO") metodo = "CARTÃO";
-
-                const resultado = DBJS.processarVenda(prodBuscado, metodo);
-                                
-                if (resultado.sucesso) {
-                    const t = resultado.transacao;
-                    const prod = resultado.produto;
-                    const respostaTxt = `[VENDA PROCESSADA]\n\n📦 Produto: ${prod.nome}\n📉 Estoque: ${prod.quantidade + 1} ➔ ${prod.quantidade}\n💵 Valor: R$ ${prod.valor.toFixed(2)}\n⚡ Pagamento: ${t.metodoPagamento}\n🕒 Data/Hora: ${t.data} - ${t.hora}`;
-                                            
-                    triggerSpeech(`Vendido um ${prod.nome} no ${t.metodoPagamento.toLowerCase()}. Estoque atualizado para ${prod.quantidade}.`);
-                    renderInstantText(respostaTxt, 'response-bubble');
-                } else if (resultado.tipo === 'ESGOTADO') {
-                    const respostaTxt = `[ALERTA ESTOQUE]\n\nEstoque esgotado para o produto: ${resultado.produto}.`;
-                    triggerSpeech(`Atenção, Mestre. Estoque esgotado para ${resultado.produto}.`);
-                    renderInstantText(respostaTxt, 'response-bubble');
-                } else {
-                    const respostaTxt = `[PRODUTO NÃO ENCONTRADO]\n\nO produto "${prodBuscado}" não está cadastrado no sistema.`;
-                    triggerSpeech(`Mestre, o produto ${prodBuscado} não foi localizado no estoque.`);
-                    renderInstantText(respostaTxt, 'response-bubble');
-                }
-                atualizarTelas();
-            } else {
-                const respostaTxt = `[HELENA PDV]\n\nComando não compreendido.\n\nPara registrar vendas use o padrão:\n- "nova venda carne na chapa pix"\n- "anota venda carne na chapa pix"\n- "cobrar 35" (para abrir a POS)`;
-                triggerSpeech("Comando não compreendido.");
-                renderInstantText(respostaTxt, 'response-bubble');
-            }
+            // Fallback se nada funcionar
+            const respostaTxt = `[HELENA PDV]\n\nComando não compreendido.\n\nTente falar ou digitar:\n- "nova venda carne na chapa pix"\n- "anota venda carne na chapa pix"\n- "cobrar 35" (para abrir a POS)`;
+            triggerSpeech("Comando não compreendido.");
+            renderInstantText(respostaTxt, 'response-bubble');
         }
 
         function renderInstantText(text, elementId) {
@@ -1450,12 +1521,12 @@
             status = "OK";
             tocarSomPOS();
             
-            let valorFormatado = parseFloat(valorRecebido).toLocaleString('pt-BR', {
+            let valorFormatated = parseFloat(valorRecebido).toLocaleString('pt-BR', {
                 style: 'currency',
                 currency: 'BRL'
             });
 
-            document.getElementById('confirmacao-valor').innerText = valorFormatado;
+            document.getElementById('confirmacao-valor').innerText = valorFormatated;
             showPOS('tela-sucesso');
 
             // Grava no histórico de Auditoria Local da máquina
@@ -1540,4 +1611,4 @@
         }
     </script>
 </body>
-    </html>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                      </html>

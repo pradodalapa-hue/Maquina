@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" content="#020617">
     <title>HELENA PDV v10.0 - HARMONY MATRIX</title>
-    
+         
     <!-- Dependências Locais/Offline para Geração de QRCode e Captura -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -458,145 +458,145 @@
             height: 100%;
         }
 
-        :root { 
-            --ouro: #D4AF37; 
-            --carcaca: #ffcc00; 
+        :root {
+            --ouro: #D4AF37;
+            --carcaca: #ffcc00;
             --tela-fundo: #FFFFFF;
-            --verde: #00a859; 
-            --vermelho: #e81c24; 
-            --preto-pos: #0a0a0a; 
+            --verde: #00a859;
+            --vermelho: #e81c24;
+            --preto-pos: #0a0a0a;
             --azul: #00f2ff;
         }
 
-        .smart-pos { 
-            background: var(--carcaca); 
-            width: 100%; 
-            max-width: 450px; 
-            height: 100%; 
-            display: flex; 
-            flex-direction: column; 
-            padding: 12px; 
+        .smart-pos {
+            background: var(--carcaca);
+            width: 100%;
+            max-width: 450px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            padding: 12px;
             box-shadow: inset 0 0 20px rgba(0,0,0,0.3);
             position: relative;
         }
 
-        .moldura-visor { 
-            background: var(--tela-fundo); 
-            flex: 4; 
-            border-radius: 25px; 
-            margin-bottom: 12px; 
-            display: flex; 
-            flex-direction: column; 
-            overflow: hidden; 
-            box-shadow: 0 8px 20px rgba(0,0,0,0.4); 
-            border: 4px solid var(--ouro); 
-            position: relative; 
+        .moldura-visor {
+            background: var(--tela-fundo);
+            flex: 4;
+            border-radius: 25px;
+            margin-bottom: 12px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+            border: 4px solid var(--ouro);
+            position: relative;
         }
 
-        .visor-interno { 
-            background: #FFF; 
-            flex: 1; 
-            position: relative; 
-            display: flex; 
-            flex-direction: column; 
+        .visor-interno {
+            background: #FFF;
+            flex: 1;
+            position: relative;
+            display: flex;
+            flex-direction: column;
         }
 
-        .camada { 
-            position: absolute; 
-            inset: 0; 
-            display: none; 
-            flex-direction: column; 
-            align-items: center; 
-            justify-content: center; 
-            background: #FFF; 
-            padding: 20px; 
-            text-align: center; 
+        .camada {
+            position: absolute;
+            inset: 0;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: #FFF;
+            padding: 20px;
+            text-align: center;
             color: #000;
         }
 
-        #v-grande { 
-            font-size: 3.5rem; 
-            color: #000; 
-            font-weight: 900; 
+        #v-grande {
+            font-size: 3.5rem;
+            color: #000;
+            font-weight: 900;
         }
 
-        .logo-dony { 
-            width: 60px; 
-            height: 60px; 
-            border-radius: 50%; 
-            border: 2px solid var(--carcaca); 
+        .logo-dony {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            border: 2px solid var(--carcaca);
         }
 
-        .box-barcode { 
-            background: #f0f0f0; 
-            padding: 8px; 
-            border-radius: 8px; 
-            width: 100%; 
-            margin-top: 8px; 
-            border: 1px solid #ddd; 
+        .box-barcode {
+            background: #f0f0f0;
+            padding: 8px;
+            border-radius: 8px;
+            width: 100%;
+            margin-top: 8px;
+            border: 1px solid #ddd;
         }
 
-        .code-text { 
-            font-size: 0.55rem; 
-            word-break: break-all; 
-            font-family: monospace; 
-            font-weight: bold; 
-            color: #333; 
+        .code-text {
+            font-size: 0.55rem;
+            word-break: break-all;
+            font-family: monospace;
+            font-weight: bold;
+            color: #333;
         }
 
-        .painel-teclado { 
-            background: var(--preto-pos); 
-            padding: 10px; 
-            border-radius: 20px; 
-            flex: 2.2; 
-            display: flex; 
-            flex-direction: column; 
-            border: 2px solid var(--ouro); 
+        .painel-teclado {
+            background: var(--preto-pos);
+            padding: 10px;
+            border-radius: 20px;
+            flex: 2.2;
+            display: flex;
+            flex-direction: column;
+            border: 2px solid var(--ouro);
         }
 
-        .grid-teclas { 
-            display: grid; 
-            grid-template-columns: repeat(4, 1fr); 
-            gap: 6px; 
-            flex: 1; 
+        .grid-teclas {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 6px;
+            flex: 1;
         }
 
-        .tecla { 
-            background: #2a2a2a; 
-            border: 1px solid #444; 
-            border-radius: 10px; 
-            color: var(--ouro); 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            justify-content: center; 
-            box-shadow: 0 3px #000; 
-            cursor: pointer; 
+        .tecla {
+            background: #2a2a2a;
+            border: 1px solid #444;
+            border-radius: 10px;
+            color: var(--ouro);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 3px #000;
+            cursor: pointer;
         }
 
-        .tecla:active { 
-            transform: translateY(2px); 
-            box-shadow: 0 1px #000; 
+        .tecla:active {
+            transform: translateY(2px);
+            box-shadow: 0 1px #000;
         }
 
-        .n { 
-            font-size: 1.4rem; 
-            font-weight: 900; 
+        .n {
+            font-size: 1.4rem;
+            font-weight: 900;
         }
 
-        .abc { 
-            font-size: 0.5rem; 
-            color: #888; 
-            font-weight: bold; 
-            margin-top: -3px; 
+        .abc {
+            font-size: 0.5rem;
+            color: #888;
+            font-weight: bold;
+            margin-top: -3px;
         }
 
-        .btn-acao { 
-            border: none; 
-            font-weight: 900; 
-            font-size: 0.7rem; 
-            border-radius: 10px; 
-            color: #fff; 
+        .btn-acao {
+            border: none;
+            font-weight: 900;
+            font-size: 0.7rem;
+            border-radius: 10px;
+            color: #fff;
             cursor: pointer;
         }
 
@@ -604,20 +604,20 @@
         .clear { background: #f9d80c; color: #000; }
         .confirm { background: var(--verde); }
 
-        .extras { 
-            display: flex; 
-            gap: 6px; 
-            margin-top: 8px; 
-            height: 38px; 
+        .extras {
+            display: flex;
+            gap: 6px;
+            margin-top: 8px;
+            height: 38px;
         }
 
-        .btn-e { 
-            flex: 1; 
-            border: none; 
-            border-radius: 10px; 
-            font-weight: 900; 
-            font-size: 0.65rem; 
-            cursor: pointer; 
+        .btn-e {
+            flex: 1;
+            border: none;
+            border-radius: 10px;
+            font-weight: 900;
+            font-size: 0.65rem;
+            cursor: pointer;
         }
 
         .btn-zap { background: #25D366; color: #fff; }
@@ -625,25 +625,25 @@
         .btn-bt { background: #0044cc; color: #fff; }
 
         /* MODAL AUDITORIA POS */
-        #modal-auditoria { 
-            display: none; 
-            position: fixed; 
-            inset: 0; 
-            background: #000; 
-            z-index: 1000; 
-            flex-direction: column; 
-            padding: 20px; 
-            border: 5px solid var(--ouro); 
+        #modal-auditoria {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: #000;
+            z-index: 1000;
+            flex-direction: column;
+            padding: 20px;
+            border: 5px solid var(--ouro);
         }
 
-        .total-caixa { 
-            color: #00ff00; 
-            font-size: 1.8rem; 
-            text-align: center; 
-            border: 1px solid #00ff00; 
-            margin: 15px 0; 
-            padding: 10px; 
-            font-weight: 900; 
+        .total-caixa {
+            color: #00ff00;
+            font-size: 1.8rem;
+            text-align: center;
+            border: 1px solid #00ff00;
+            margin: 15px 0;
+            padding: 10px;
+            font-weight: 900;
         }
 
         /* BOTÃO VOLTAR EXCLUSIVO DA MÁQUINA */
@@ -706,13 +706,7 @@
             
             <!-- CONSOLE DE RESPOSTA DA HELENA -->
             <div class="response-container">
-                <div id="response-bubble">Sistemas administrados pelo DBJS e alimentados pelo JSLN, Mestre José. HELENA PDV v10.0 Ativa.
-
-Como usar o PDV por voz ou texto:
-- Fale ou digite: "nova venda [produto] [método]"
-- Comando Direto POS: "cobrar [valor]" (Ex: "cobrar 35 reais")
-
-O motor DBJS gerencia o estado operacional gravando automaticamente sobre a estrutura do JSLN e sincronizando com o Service Worker em segundo plano.</div>
+                <div id="response-bubble">Sistemas administrados pelo DBJS e alimentados pelo JSLN, Mestre José. HELENA PDV v10.0 Ativa.  Como usar o PDV por voz ou texto: - Fale ou digite: "nova venda [produto] [método]" - Comando Direto POS: "cobrar [valor]" (Ex: "cobrar 35 reais")  O motor DBJS gerencia o estado operacional gravando automaticamente sobre a estrutura do JSLN e sincronizando com o Service Worker em segundo plano.</div>
             </div>
 
             <!-- CONSOLE DE COMANDO -->
@@ -1028,6 +1022,12 @@ O motor DBJS gerencia o estado operacional gravando automaticamente sobre a estr
 
     <!-- ==================== SCRIPTS DA INTERFACE & INTERAÇÃO ==================== -->
     <script>
+        // DECLARAÇÃO GLOBAL EXPLICITA DE VARIÁVEIS DE ÁUDIO (PROTEÇÃO DE MEMÓRIA)
+        let recognition = null;
+        let isRecording = false;
+        let isSpeaking = false;
+        const synth = window.speechSynthesis; // Inicialização do motor de síntese de voz
+
         // Registro do Service Worker e Inicialização
         window.addEventListener('load', async () => {
             inicializarAjusteViewport();
@@ -1158,7 +1158,7 @@ O motor DBJS gerencia o estado operacional gravando automaticamente sobre a estr
                 .normalize("NFD")
                 .replace(/[\u0300-\u036f]/g, "");
 
-            // NOVO GATILHO: cobrar [valor] (abre POS direto com valor carregado e QR Code)
+            // GATILHO: cobrar [valor]
             const regexCobrar = /^cobrar\s+(.+)$/i;
             const matchCobrar = cleanQuery.match(regexCobrar);
             
@@ -1198,7 +1198,7 @@ O motor DBJS gerencia o estado operacional gravando automaticamente sobre a estr
                     const t = resultado.transacao;
                     const prod = resultado.produto;
                     const respostaTxt = `[VENDA PROCESSADA]\n\n📦 Produto: ${prod.nome}\n📉 Estoque: ${prod.quantidade + 1} ➔ ${prod.quantidade}\n💵 Valor: R$ ${prod.valor.toFixed(2)}\n⚡ Pagamento: ${t.metodoPagamento}\n🕒 Data/Hora: ${t.data} - ${t.hora}`;
-                                        
+                                            
                     triggerSpeech(`Vendido um ${prod.nome} no ${t.metodoPagamento.toLowerCase()}. Estoque atualizado para ${prod.quantidade}.`);
                     renderInstantText(respostaTxt, 'response-bubble');
                 } else if (resultado.tipo === 'ESGOTADO') {
@@ -1225,7 +1225,7 @@ O motor DBJS gerencia o estado operacional gravando automaticamente sobre a estr
             parentContainer.scrollTop = parentContainer.scrollHeight;
         }
 
-        // MICROFONE E RECONHECIMENTO (BLINDADO CONTRA TRAVAMENTO)
+        // MICROFONE E RECONHECIMENTO (BLINDADO CONTRA TRAVAMENTO E PERDA DE REFERÊNCIA)
         function inicializarSpeechRecognition() {
             if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
                 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -1246,7 +1246,10 @@ O motor DBJS gerencia o estado operacional gravando automaticamente sobre a estr
                 };
 
                 recognition.onerror = (e) => {
-                    console.error("Erro no microfone:", e);
+                    console.error("Erro no subsistema de captura de áudio JDP:", e.error);
+                    if (e.error === 'not-allowed') {
+                        renderInstantText("[ALERTA SISTEMA]\n\nPermissão para o microfone foi negada pelo Android/Navegador. Por favor, conceda permissão de áudio para o aplicativo HELENA.", 'response-bubble');
+                    }
                     pararGravacao();
                 };
 
@@ -1258,24 +1261,35 @@ O motor DBJS gerencia o estado operacional gravando automaticamente sobre a estr
                     }
                 };
             } else {
+                console.warn("Reconhecimento de fala nativo não suportado neste dispositivo.");
                 document.getElementById('mic-btn').style.display = 'none';
             }
         }
 
         function toggleMicrofone() {
-            if (!recognition) return;
-            if (isSpeaking) {
+            if (!recognition) {
+                alert("Mestre, o reconhecimento de áudio não é suportado pelo navegador ou dispositivo atual.");
+                return;
+            }
+            
+            // Blindagem: Se a HELENA estiver falando, interrompe a fala antes de iniciar o microfone
+            if (synth && synth.speaking) {
                 synth.cancel();
                 isSpeaking = false;
                 document.getElementById('led-indicator').className = 'status-led';
             }
+
             if (isRecording) {
-                recognition.stop();
+                try {
+                    recognition.stop();
+                } catch(e) {
+                    console.warn("Falha ao interromper reconhecimento:", e);
+                }
             } else {
                 try {
                     recognition.start();
                 } catch(e) {
-                    console.warn("Reconhecimento já ativo ou reiniciando.");
+                    console.warn("Reconhecimento já estava ativo ou reiniciando.");
                 }
             }
         }
@@ -1318,9 +1332,11 @@ O motor DBJS gerencia o estado operacional gravando automaticamente sobre a estr
         function triggerSpeech(texto) {
             if (!synth) return;
             
-            // Cancela qualquer gravação ativa para evitar loop de retorno
+            // Cancela gravação ativa para evitar loop de retorno acústico
             if (isRecording && recognition) {
-                recognition.stop();
+                try {
+                    recognition.stop();
+                } catch(e) {}
             }
 
             setTimeout(() => {
@@ -1353,6 +1369,7 @@ O motor DBJS gerencia o estado operacional gravando automaticamente sobre a estr
                 } catch (e) {
                     isSpeaking = false;
                     document.getElementById('led-indicator').className = 'status-led';
+                    console.error("Erro na síntese de voz:", e);
                 }
             }, 50);
         }
@@ -1379,16 +1396,16 @@ O motor DBJS gerencia o estado operacional gravando automaticamente sobre a estr
             document.getElementById('v-grande').innerText = val.toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
         }
 
-        function apagarPOS() { 
-            montante = montante.slice(0,-1); 
-            if(!montante) resetPOS(); 
-            else atualizarVisorPOS(); 
+        function apagarPOS() {
+            montante = montante.slice(0,-1);
+            if(!montante) resetPOS();
+            else atualizarVisorPOS();
         }
 
-        function resetPOS() { 
-            montante = ""; 
-            status = "TV"; 
-            showPOS('tela-logo'); 
+        function resetPOS() {
+            montante = "";
+            status = "TV";
+            showPOS('tela-logo');
         }
 
         function gerarPagamentoPOS() {
@@ -1482,15 +1499,15 @@ O motor DBJS gerencia o estado operacional gravando automaticamente sobre a estr
             });
         }
 
-        function abrirAuditoria() { 
-            if(prompt("SENHA JDP:") === "1234") { 
-                document.getElementById('modal-auditoria').style.display="flex"; 
-                renderizarAuditoria(); 
-            } 
+        function abrirAuditoria() {
+            if(prompt("SENHA JDP:") === "1234") {
+                document.getElementById('modal-auditoria').style.display="flex";
+                renderizarAuditoria();
+            }
         }
 
-        function fecharAuditoria() { 
-            document.getElementById('modal-auditoria').style.display="none"; 
+        function fecharAuditoria() {
+            document.getElementById('modal-auditoria').style.display="none";
         }
 
         function renderizarAuditoria() {
@@ -1500,19 +1517,23 @@ O motor DBJS gerencia o estado operacional gravando automaticamente sobre a estr
             document.getElementById('soma-total').innerText = `TOTAL: R$ ${soma.toFixed(2).replace('.', ',')}`;
         }
 
-        function limparCaderno() { 
-            if(confirm("APAGAR TUDO?")) { 
-                localStorage.removeItem('jdp_auditoria'); 
-                renderizarAuditoria(); 
-            } 
+        function limparCaderno() {
+            if(confirm("APAGAR TUDO?")) {
+                localStorage.removeItem('jdp_auditoria');
+                renderizarAuditoria();
+            }
         }
 
-        function tocarSomPOS() { 
-            const ctx = new AudioContext(); 
-            const osc = ctx.createOscillator(); 
-            osc.connect(ctx.destination); 
-            osc.start(); 
-            osc.stop(ctx.currentTime + 0.2); 
+        function tocarSomPOS() {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                osc.connect(ctx.destination);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.2);
+            } catch (e) {
+                console.warn("Falha ao tocar som POS:", e);
+            }
         }
     </script>
 </body>

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" content="#020617">
     <title>HELENA PDV v10.0 - HARMONY MATRIX</title>
-                    
+                          
     <!-- Dependências Locais/Offline para Geração de QRCode e Captura -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -706,7 +706,7 @@
                                       
             <!-- CONSOLE DE RESPOSTA DA HELENA -->
             <div class="response-container">
-                <div id="response-bubble">Sistemas administrados pelo DBJS e alimentados pelo JSLN, Mestre José. HELENA PDV v10.0 Ativa.  Como usar o PDV por voz ou texto: - Fale ou digite: "nova venda [produto] [método]" - Comando Direto POS: "cobrar [valor]" (Ex: "cobrar 35 reais")  O motor DBJS gerencia o estado operacional gravando automaticamente sobre a estrutura do JSLN e sincronizando com o Service Worker em segundo plano.</div>
+                <div id="response-bubble">Sistemas administrados pelo DBJS e alimentados pelo JSLN, Mestre José. HELENA PDV v10.0 Ativa.  Como usar o PDV por voz ou texto: - Fale ou digite: "nova venda [produto] [método]" - Comando Direto POS: "cobrar [valor]" (Ex: "cobrar 35 reais")  Para Calculadora: Fale ou digite: "quanto é [operação]" (Ex: "quanto é 35 mais 45" ou "120 vezes 3"). O motor DBJS gerencia o estado operacional gravando automaticamente sobre a estrutura do JSLN e sincronizando com o Service Worker em segundo plano.</div>
             </div>
 
             <!-- CONSOLE DE COMANDO -->
@@ -889,6 +889,38 @@
                 .trim();
         }
 
+        // NOVO MOTOR TRADUTOR ARITMÉTICO PARA ÁUDIO E TEXTO
+        function normalizarMatematica(txt) {
+            if (!txt) return "";
+            let t = txt.toLowerCase()
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, ""); // Remove acentos
+
+            // Tradução de termos falados em operadores lógicos reais
+            t = t.replace(/\bmais\b/g, "+");
+            t = t.replace(/\bmenos\b/g, "-");
+            t = t.replace(/\bvezes\b/g, "*");
+            t = t.replace(/\bdividido por\b/g, "/");
+            t = t.replace(/\bdividido\b/g, "/");
+            t = t.replace(/\bpor\b/g, "/");
+            t = t.replace(/\bx\b/g, "*"); // "2 x 2" -> "2 * 2"
+
+            // Limpeza de termos de ativação de voz da calculadora
+            t = t.replace(/quanto\s+e/g, "");
+            t = t.replace(/quanto\s+e\s+o\s+resultado\s+de/g, "");
+            t = t.replace(/calculadora/g, "");
+            t = t.replace(/calcule/g, "");
+            t = t.replace(/calcular/g, "");
+
+            // Converte vírgula decimal em ponto para o interpretador JS
+            t = t.replace(/(\d+),(\d+)/g, "$1.$2");
+
+            // Filtro de segurança: remove tudo que não for caractere matemático
+            t = t.replace(/[^0-9+\-*/().\s]/g, "");
+            t = t.replace(/\s+/g, "").trim(); // Remove espaços internos
+            return t;
+        }
+
         const DBJS = (() => {
             const STORAGE_KEY = 'helena_cerebro_json';
             let JSLN_DATABASE = { produtos: [], transacoes: [] };
@@ -935,7 +967,7 @@
                 cadastrarOuAtualizarProduto(nome, quantidade, valor) {
                     const nomeFormatado = nome.toUpperCase().trim();
                     const existente = JSLN_DATABASE.produtos.find(p => normalizarTexto(p.nome) === normalizarTexto(nomeFormatado));
-                    if (existente) {
+                    if (existing) {
                         existente.quantidade += quantidade;
                         existente.valor = valor;
                         this.salvar();
@@ -1156,7 +1188,7 @@
         function removerProdutoEstoque(index) {
             DBJS.removerProduto(index);
             atualizarTelas();
-            triggerSpeech("Produto deletedo.");
+            triggerSpeech("Produto deletado.");
         }
 
         // PARSER DINÂMICO DE COMANDOS JDP (MÁXIMA TOLERÂNCIA A MAIÚSCULAS/MINÚSCULAS/CONECTORES)
@@ -1175,7 +1207,6 @@
             }
 
             // 2. GATILHO DE VENDA (Ex: "nova venda de carne na chapa no pix", "anota carne na chapa dinheiro", "carne na chapa pix")
-            // Identifica o método de pagamento primeiro em qualquer lugar da string
             let metodo = "";
             const metodosSuportados = ["pix", "dinheiro", "cartao", "credito", "debito"];
             for (let m of metodosSuportados) {
@@ -1186,7 +1217,6 @@
             }
 
             if (metodo) {
-                // Remove prefixos comuns de ativação do início da frase
                 let prodStr = queryNorm;
                 const prefixos = [
                     "nova venda de", "novo venda de", "nova venda", "novo venda", "venda de", "venda", 
@@ -1204,7 +1234,6 @@
                     }
                 }
 
-                // Remove o método de pagamento e conectores anteriores do final da frase
                 const sufixos = [
                     " no " + metodo, " na " + metodo, " em " + metodo, " com " + metodo, " " + metodo,
                     "no " + metodo, "na " + metodo, "em " + metodo, "com " + metodo
@@ -1217,7 +1246,6 @@
                     }
                 }
 
-                // Limpa conectores residuais que possam ter sobrado no início do produto (ex: "de carne na chapa" -> "carne na chapa")
                 if (prodStr.startsWith("de ") || prodStr.startsWith("do ") || prodStr.startsWith("da ")) {
                     prodStr = prodStr.substring(3).trim();
                 }
@@ -1230,7 +1258,7 @@
             return null; // Comando não mapeado
         }
 
-        // CHAT PROCESSADOR HELENA
+        // CHAT PROCESSADOR HELENA (INTEGRAÇÃO DA CALCULADORA JDP SOBERANA)
         function processarComandoPDV() {
             const queryInput = document.getElementById('query-input');
             const queryOriginal = queryInput.value.trim();
@@ -1242,7 +1270,45 @@
             const responseBubble = document.getElementById('response-bubble');
             responseBubble.innerHTML = "...";
 
-            // Executa o Parser Dinâmico Blindado
+            const queryLowerRaw = queryOriginal.toLowerCase();
+
+            // ==================== NOVO BLOCO: DETECTA E PROCESSA CALCULADORA SOBERANA ====================
+            const expressaoMatematica = normalizarMatematica(queryOriginal);
+            const temOperador = /[+\-*/]/.test(expressaoMatematica);
+            const temNumero = /[0-9]/.test(expressaoMatematica);
+            const eCalculadora = queryLowerRaw.includes("calculadora") || 
+                                 queryLowerRaw.includes("calcule") || 
+                                 queryLowerRaw.includes("calcular") || 
+                                 queryLowerRaw.includes("quanto e") || 
+                                 queryLowerRaw.includes("quanto ee") ||
+                                 queryLowerRaw.includes("quanto é") ||
+                                 queryLowerRaw.includes("mais") ||
+                                 queryLowerRaw.includes("menos") ||
+                                 queryLowerRaw.includes("vezes") ||
+                                 queryLowerRaw.includes("dividido");
+
+            if (eCalculadora || (temOperador && temNumero)) {
+                try {
+                    // Executa o cálculo localmente com isolamento de escopo
+                    const calculo = Function(`"use strict"; return (${expressaoMatematica})`)();
+                    if (calculo !== undefined && !isNaN(calculo)) {
+                        const respostaTxt = `[MOTOR ARITMÉTICO NATIVO JDP]\n\nExpressão resolvida localmente:\n\n💻 Entrada: "${queryOriginal}"\n⚙️ Processado: ${expressaoMatematica}\n📊 Resultado: ${calculo}`;
+                        triggerSpeech(`O resultado é ${calculo}`);
+                        renderInstantText(respostaTxt, 'response-bubble');
+                        return;
+                    }
+                } catch (e) {
+                    if (eCalculadora) {
+                        const respostaTxt = `[SISTEMA ARITMÉTICO JDP]\n\nErro ao processar cálculo matemático.\n\n💻 Entrada: "${queryOriginal}"\n⚙️ Tentativa: ${expressaoMatematica}`;
+                        triggerSpeech("Erro no processamento do cálculo.");
+                        renderInstantText(respostaTxt, 'response-bubble');
+                        return;
+                    }
+                }
+            }
+            // ============================================================================================
+
+            // Executa o Parser Dinâmico de Vendas e Cobrança
             const comando = processarComandoDinamico(queryOriginal);
 
             if (comando) {
@@ -1287,7 +1353,7 @@
             }
 
             // Fallback se nada funcionar
-            const respostaTxt = `[HELENA PDV]\n\nComando não compreendido.\n\nTente falar ou digitar:\n- "nova venda carne na chapa pix"\n- "anota venda carne na chapa pix"\n- "cobrar 35" (para abrir a POS)`;
+            const respostaTxt = `[HELENA PDV]\n\nComando não compreendido.\n\nTente falar ou digitar:\n- "nova venda carne na chapa pix"\n- "quanto é 150 mais 250"\n- "cobrar 35"`;
             triggerSpeech("Comando não compreendido.");
             renderInstantText(respostaTxt, 'response-bubble');
         }
@@ -1611,4 +1677,4 @@
         }
     </script>
 </body>
-                                                                                                                                                                                                                                                                                                                                                                                                                                                      </html>
+    </html>

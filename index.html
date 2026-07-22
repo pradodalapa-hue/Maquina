@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" content="#020617">
     <title>HELENA PDV v10.0 - HARMONY MATRIX</title>
-         
+              
     <!-- Dependências Locais/Offline para Geração de QRCode e Captura -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -703,7 +703,7 @@
 
     <main>
         <div id="interaction-deck">
-            
+                         
             <!-- CONSOLE DE RESPOSTA DA HELENA -->
             <div class="response-container">
                 <div id="response-bubble">Sistemas administrados pelo DBJS e alimentados pelo JSLN, Mestre José. HELENA PDV v10.0 Ativa.  Como usar o PDV por voz ou texto: - Fale ou digite: "nova venda [produto] [método]" - Comando Direto POS: "cobrar [valor]" (Ex: "cobrar 35 reais")  O motor DBJS gerencia o estado operacional gravando automaticamente sobre a estrutura do JSLN e sincronizando com o Service Worker em segundo plano.</div>
@@ -781,7 +781,7 @@
     <!-- ==================== CAMADA SMART POS V46 GIGANTE ==================== -->
     <div id="pos-layer">
         <div class="smart-pos">
-            
+                         
             <!-- Cabeçalho Superior da Máquina com Voltar -->
             <div style="display: flex; justify-content: space-between; align-items: center; width:100%;">
                 <button class="btn-pos-voltar" onclick="fecharPOS()">⬅ Voltar</button>
@@ -1154,12 +1154,15 @@
             const responseBubble = document.getElementById('response-bubble');
             responseBubble.innerHTML = "...";
 
+            // BLINDAGEM MÁXIMA DE ÁUDIO: Remove acentos e qualquer pontuação residual do áudio (ex: pontos finais inseridos pelo Android)
             const cleanQuery = queryOriginal.toLowerCase()
                 .normalize("NFD")
-                .replace(/[\u0300-\u036f]/g, "");
+                .replace(/[\u0300-\u036f]/g, "")
+                .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?]/g, "") // Limpa pontuações inseridas pelo reconhecimento de voz
+                .trim();
 
             // GATILHO: cobrar [valor]
-            const regexCobrar = /^Cobrar\s+(.+)$/i;
+            const regexCobrar = /^cobrar\s+(.+)$/i;
             const matchCobrar = cleanQuery.match(regexCobrar);
             
             if (matchCobrar) {
@@ -1182,8 +1185,8 @@
                 return;
             }
 
-            // GATILHO PADRÃO DE VENDAS
-            const regexVenda = /^(?:Nova|novo)\s+venda\s+(.+?)\s+(pix|dinheiro|cartao|credito|debito)$/i;
+            // GATILHO DE VENDAS FLEXÍVEL (Aceita: "nova venda", "anota venda", "anota vendas", "venda", "registrar venda", "anotar venda")
+            const regexVenda = /^(?:nova\s+|novo\s+|anota\s+|anotar\s+|registra\s+|registrar\s+)?venda[s]?\s+(.+?)\s+(pix|dinheiro|cartao|credito|debito)$/i;
             const match = cleanQuery.match(regexVenda);
 
             if (match) {
@@ -1212,7 +1215,7 @@
                 }
                 atualizarTelas();
             } else {
-                const respostaTxt = `[HELENA PDV]\n\nComando não compreendido.\n\nPara registrar vendas use o padrão:\n- "nova venda carne na chapa pix"\n- "cobrar 35" (para abrir a POS)`;
+                const respostaTxt = `[HELENA PDV]\n\nComando não compreendido.\n\nPara registrar vendas use o padrão:\n- "nova venda carne na chapa pix"\n- "anota venda carne na chapa pix"\n- "cobrar 35" (para abrir a POS)`;
                 triggerSpeech("Comando não compreendido.");
                 renderInstantText(respostaTxt, 'response-bubble');
             }

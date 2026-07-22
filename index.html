@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" content="#020617">
-    <title>HELENA PDV v10.0 - DBJS SUPREME & POS V46</title>
+    <title>HELENA PDV v10.0 - HARMONY MATRIX</title>
     
     <!-- Dependências Locais/Offline para Geração de QRCode e Captura -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -710,8 +710,7 @@
 
 Como usar o PDV por voz ou texto:
 - Fale ou digite: "nova venda [produto] [método]"
-- Exemplo: "nova venda carne na chapa pix"
-- Exemplo: "novo venda hamburguer dinheiro"
+- Comando Direto POS: "cobrar [valor]" (Ex: "cobrar 35 reais")
 
 O motor DBJS gerencia o estado operacional gravando automaticamente sobre a estrutura do JSLN e sincronizando com o Service Worker em segundo plano.</div>
             </div>
@@ -1029,8 +1028,6 @@ O motor DBJS gerencia o estado operacional gravando automaticamente sobre a estr
 
     <!-- ==================== SCRIPTS DA INTERFACE & INTERAÇÃO ==================== -->
     <script>
-        let currDatabase = null;
-
         // Registro do Service Worker e Inicialização
         window.addEventListener('load', async () => {
             inicializarAjusteViewport();
@@ -1161,6 +1158,31 @@ O motor DBJS gerencia o estado operacional gravando automaticamente sobre a estr
                 .normalize("NFD")
                 .replace(/[\u0300-\u036f]/g, "");
 
+            // NOVO GATILHO: cobrar [valor] (abre POS direto com valor carregado e QR Code)
+            const regexCobrar = /^cobrar\s+(.+)$/i;
+            const matchCobrar = cleanQuery.match(regexCobrar);
+            
+            if (matchCobrar) {
+                let valorTexto = matchCobrar[1].trim();
+                let numMatch = valorTexto.match(/\d+([.,]\d+)?/);
+                if (numMatch) {
+                    let valorFloat = parseFloat(numMatch[0].replace(',', '.'));
+                    if (!isNaN(valorFloat) && valorFloat > 0) {
+                        let cents = Math.round(valorFloat * 100).toString();
+                        abrirPOS();
+                        montante = cents;
+                        status = "DIG";
+                        atualizarVisorPOS();
+                        gerarPagamentoPOS(); // Auto gera o QR Code na tela
+                        triggerSpeech(`Cobrando R$ ${valorFloat.toFixed(2).replace('.', ',')} na máquina.`);
+                        return;
+                    }
+                }
+                triggerSpeech("Mestre, não compreendi o valor a ser cobrado.");
+                return;
+            }
+
+            // GATILHO PADRÃO DE VENDAS
             const regexVenda = /^(?:nova|novo)\s+venda\s+(.+?)\s+(pix|dinheiro|cartao|credito|debito)$/i;
             const match = cleanQuery.match(regexVenda);
 
@@ -1190,7 +1212,7 @@ O motor DBJS gerencia o estado operacional gravando automaticamente sobre a estr
                 }
                 atualizarTelas();
             } else {
-                const respostaTxt = `[HELENA PDV]\n\nComando não compreendido.\n\nPara registrar vendas use o padrão:\n- "nova venda carne na chapa pix"\n- "novo venda hamburguer dinheiro"`;
+                const respostaTxt = `[HELENA PDV]\n\nComando não compreendido.\n\nPara registrar vendas use o padrão:\n- "nova venda carne na chapa pix"\n- "cobrar 35" (para abrir a POS)`;
                 triggerSpeech("Comando não compreendido.");
                 renderInstantText(respostaTxt, 'response-bubble');
             }
@@ -1203,7 +1225,7 @@ O motor DBJS gerencia o estado operacional gravando automaticamente sobre a estr
             parentContainer.scrollTop = parentContainer.scrollHeight;
         }
 
-        // MICROFONE E RECONHECIMENTO
+        // MICROFONE E RECONHECIMENTO (BLINDADO CONTRA TRAVAMENTO)
         function inicializarSpeechRecognition() {
             if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
                 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -1213,13 +1235,9 @@ O motor DBJS gerencia o estado operacional gravando automaticamente sobre a estr
                 recognition.lang = 'pt-BR';
 
                 recognition.onstart = () => {
-                    if (isSpeaking) {
-                        recognition.stop();
-                        return;
-                    }
                     isRecording = true;
                     document.getElementById('mic-btn').classList.add('recording');
-                    document.getElementById('led-indicator').classList.add('listening');
+                    document.getElementById('led-indicator').className = 'status-led listening';
                 };
 
                 recognition.onresult = (event) => {
@@ -1228,14 +1246,14 @@ O motor DBJS gerencia o estado operacional gravando automaticamente sobre a estr
                 };
 
                 recognition.onerror = (e) => {
-                    console.error(e);
+                    console.error("Erro no microfone:", e);
                     pararGravacao();
                 };
 
                 recognition.onend = () => {
                     pararGravacao();
                     const inputVal = document.getElementById('query-input').value.trim();
-                    if (inputVal && !isSpeaking) {
+                    if (inputVal) {
                         processarComandoPDV();
                     }
                 };
@@ -1245,18 +1263,27 @@ O motor DBJS gerencia o estado operacional gravando automaticamente sobre a estr
         }
 
         function toggleMicrofone() {
-            if (!recognition || isSpeaking) return;
+            if (!recognition) return;
+            if (isSpeaking) {
+                synth.cancel();
+                isSpeaking = false;
+                document.getElementById('led-indicator').className = 'status-led';
+            }
             if (isRecording) {
                 recognition.stop();
             } else {
-                recognition.start();
+                try {
+                    recognition.start();
+                } catch(e) {
+                    console.warn("Reconhecimento já ativo ou reiniciando.");
+                }
             }
         }
 
         function pararGravacao() {
             isRecording = false;
             document.getElementById('mic-btn').classList.remove('recording');
-            document.getElementById('led-indicator').classList.remove('listening');
+            document.getElementById('led-indicator').className = 'status-led';
         }
 
         function baixarCerebroJSON() {
@@ -1290,11 +1317,16 @@ O motor DBJS gerencia o estado operacional gravando automaticamente sobre a estr
 
         function triggerSpeech(texto) {
             if (!synth) return;
+            
+            // Cancela qualquer gravação ativa para evitar loop de retorno
+            if (isRecording && recognition) {
+                recognition.stop();
+            }
+
             setTimeout(() => {
                 try {
                     isSpeaking = true;
-                    document.getElementById('led-indicator').classList.add('speaking');
-                    if (isRecording && recognition) { recognition.stop(); }
+                    document.getElementById('led-indicator').className = 'status-led speaking';
                     synth.cancel(); 
 
                     let textoLimpo = texto.replace(/<div[\s\S]*?<\/div>/g, "[Painel]");
@@ -1311,18 +1343,18 @@ O motor DBJS gerencia o estado operacional gravando automaticamente sobre a estr
 
                     utterance.onend = () => {
                         isSpeaking = false;
-                        document.getElementById('led-indicator').classList.remove('speaking');
+                        document.getElementById('led-indicator').className = 'status-led';
                     };
                     utterance.onerror = () => {
                         isSpeaking = false;
-                        document.getElementById('led-indicator').classList.remove('speaking');
+                        document.getElementById('led-indicator').className = 'status-led';
                     };
                     synth.speak(utterance);
                 } catch (e) {
                     isSpeaking = false;
-                    document.getElementById('led-indicator').classList.remove('speaking');
+                    document.getElementById('led-indicator').className = 'status-led';
                 }
-            }, 0);
+            }, 50);
         }
 
         // ==================== LÓGICA DO TERMINAL POS V46 (SEM AUTO-PAGAMENTO) ====================
@@ -1362,7 +1394,7 @@ O motor DBJS gerencia o estado operacional gravando automaticamente sobre a estr
         function gerarPagamentoPOS() {
             if(!montante) return;
 
-            // SE JÁ ESTIVER NA TELA DE PIX E PRESSIONAR "ENTRA" DE NOVO: CONFIRMAÇÃO MANUAL DE PAGAMENTO
+            // CONFIRMAÇÃO MANUAL DE PAGAMENTO (ENTRA SEGUNDA VEZ)
             if (status === "PIX") {
                 const v = (parseFloat(montante)/100).toFixed(2);
                 confirmarFinalPOS(v);
@@ -1414,7 +1446,7 @@ O motor DBJS gerencia o estado operacional gravando automaticamente sobre a estr
             });
             localStorage.setItem('jdp_auditoria', JSON.stringify(hist));
 
-            // INTEGRAÇÃO DIRETA COM O DBJS (Injeta na receita do cerebro.json)
+            // INTEGRAÇÃO DIRETA COM O DBJS
             DBJS.registrarVendaPOS(valorRecebido);
 
             if(motorBT) imprimirTicket();
@@ -1484,4 +1516,4 @@ O motor DBJS gerencia o estado operacional gravando automaticamente sobre a estr
         }
     </script>
 </body>
-</html>
+    </html>

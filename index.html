@@ -1159,7 +1159,7 @@
                 .replace(/[\u0300-\u036f]/g, "");
 
             // GATILHO: cobrar [valor]
-            const regexCobrar = /^cobrar\s+(.+)$/i;
+            const regexCobrar = /^Cobrar\s+(.+)$/i;
             const matchCobrar = cleanQuery.match(regexCobrar);
             
             if (matchCobrar) {
@@ -1183,7 +1183,7 @@
             }
 
             // GATILHO PADRÃO DE VENDAS
-            const regexVenda = /^(?:nova|novo)\s+venda\s+(.+?)\s+(pix|dinheiro|cartao|credito|debito)$/i;
+            const regexVenda = /^(?:Nova|novo)\s+venda\s+(.+?)\s+(pix|dinheiro|cartao|credito|debito)$/i;
             const match = cleanQuery.match(regexVenda);
 
             if (match) {

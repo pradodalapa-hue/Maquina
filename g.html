@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>JDP v22.0 - SUPREME SATELLITE RADAR</title>
+    <title>JDP v23.0 - SUPREME POLYGON RADAR</title>
               
     <!-- Firebase, Leaflet e QRCode -->
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
@@ -75,7 +75,7 @@
             border-radius: 8px;
             z-index: 10;
             font-size: 11px;
-            width: 240px;
+            width: 250px;
             pointer-events: none;
             font-family: monospace;
         }
@@ -276,6 +276,28 @@
             box-shadow: 0 0 15px var(--green);
         }
 
+        .btn-desenhar {
+            width: 100%;
+            padding: 10px;
+            background: rgba(253, 224, 71, 0.15);
+            border: 1px dashed var(--gold);
+            color: var(--gold);
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            text-transform: uppercase;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 11px;
+            margin-bottom: 12px;
+            transition: 0.3s;
+        }
+        .btn-desenhar.ativo {
+            background: var(--gold);
+            color: #000;
+            border-style: solid;
+            box-shadow: 0 0 15px var(--gold);
+        }
+
         .secret-btn {
             width: 100%;
             padding: 12px;
@@ -431,33 +453,27 @@
                 <div id="resultados-busca"></div>
             </div>
 
+            <!-- FERRAMENTA DE DESENHO VETORIAL DE POLÍGONO -->
+            <button id="btn-modo-desenho" class="btn-desenhar" onclick="toggleModoDesenho()">
+                <i class="fa-solid fa-pen-ruler"></i> Desenhar Área (Clicar no Mapa)
+            </button>
+
             <div class="input-group">
                 <label>Nome do Estacionamento / Rua:</label>
                 <input type="text" id="config-endereco" placeholder="Ex: ESTACIONAMENTO CENTRAL PRADO">
             </div>
-            
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                <div class="input-group">
-                    <label>Latitude:</label>
-                    <input type="text" id="config-lat" placeholder="-2.9903" readonly style="background: rgba(0,0,0,0.5); border-color: var(--blue);">
-                </div>
-                <div class="input-group">
-                    <label>Longitude:</label>
-                    <input type="text" id="config-lng" placeholder="-60.0673" readonly style="background: rgba(0,0,0,0.5); border-color: var(--blue);">
-                </div>
-            </div>
 
-            <div class="input-group">
-                <label>Largura do Estacionamento (Metros):</label>
-                <input type="number" id="config-raio" placeholder="50" value="50" oninput="atualizarCirculoPrevia(this.value)">
-            </div>
+            <p style="font-size: 9px; color: var(--gold); text-align: center; margin-top: 5px; text-transform: uppercase; line-height: 1.4;">
+                💡 <strong>Como desenhar:</strong> Ative o botão acima, feche o painel se necessário e dê cliques sequenciais no mapa para desenhar o polígono perfeito do seu estacionamento.
+            </p>
 
-            <p style="font-size: 9px; color: var(--gold); text-align: center; margin-top: 5px; text-transform: uppercase;">💡 Dica: O senhor pode arrastar o pino vermelho 📍 diretamente no mapa para desenhar o perímetro exato.</p>
-
-            <button class="secret-btn" onclick="salvarConfiguracaoEstacionamento()">SALVAR CONFIGURAÇÃO</button>
+            <button class="secret-btn" onclick="salvarConfiguracaoEstacionamento()">SALVAR DESENHO</button>
             <div class="close-secret" onclick="fecharPainelSecreto()">FECHAR PAINEL [X]</div>
         </div>
     </div>
+
+    <!-- LOGO JDP COM DETECTOR DE CLIQUES DO CRIADOR -->
+    <img id="btn-logo" src="https://raw.githubusercontent.com/pradodalapa-hue/fotos-industrial/main/img/jdp_1779773266613_1776103725063.png" alt="Cardápio" style="position: absolute; bottom: 30px; left: 30px; width: 80px; height: 80px; z-index: 2000; cursor: pointer; border-radius: 50%; border: 3px solid var(--gold); box-shadow: 0 0 15px rgba(253, 224, 71, 0.5); transition: 0.3s;" onclick="registrarCliqueSecreto()">
 
     <script>
         const firebaseConfig = { apiKey: "", databaseURL: "https://dony-burguers-default-rtdb.firebaseio.com" };
@@ -470,27 +486,40 @@
         const FOTO_FRANELINHA = "https://raw.githubusercontent.com/pradodalapa-hue/fotos-industrial/main/img/jdp_1786891045517_icon_192.png";
 
         let etapa = 0, placaTmp = "", corTmp = "", sessaoSaida = null, charBT = null;
-        let mapRadar = null, markerFranelinha = null, markerEstacionamento = null, circuloBase = null;
+        let mapRadar = null, markerFranelinha = null, poligonoEstacionamento = null;
+        
+        // Modo de Desenho Vetorial
+        let modoDesenhoAtivo = false;
+        let pontosDesenho = []; // Armazena os pares de [lat, lng]
 
         let configEstacionamento = {
             endereco: "ESTACIONAMENTO CENTRAL JDP",
-            lat: -2.9903,
-            lng: -60.0673,
-            raio: 50
+            poligono: [
+                [-2.9908, -60.0678],
+                [-2.9898, -60.0678],
+                [-2.9898, -60.0668],
+                [-2.9908, -60.0668]
+            ]
         };
+
+        // Detector de cliques secretos
+        let cliquesLogo = 0;
+        let timerCliques;
+
+        function registrarCliqueSecreto() {
+            cliquesLogo++;
+            clearTimeout(timerCliques);
+            if (cliquesLogo >= 5) {
+                cliquesLogo = 0;
+                abrirPainelSecreto();
+            } else {
+                timerCliques = setTimeout(() => { cliquesLogo = 0; }, 2000);
+            }
+        }
 
         function abrirPainelSecreto() {
             document.getElementById('painel-secreto').style.display = 'flex';
             document.getElementById('config-endereco').value = configEstacionamento.endereco;
-            document.getElementById('config-lat').value = configEstacionamento.lat;
-            document.getElementById('config-lng').value = configEstacionamento.lng;
-            document.getElementById('config-raio').value = configEstacionamento.raio;
-            
-            // Habilita movimentação física do marcador de engenharia
-            if (markerEstacionamento) {
-                markerEstacionamento.dragging.enable();
-            }
-
             if (mapRadar) {
                 setTimeout(() => { mapRadar.invalidateSize(); }, 200);
             }
@@ -498,9 +527,27 @@
 
         function fecharPainelSecreto() {
             document.getElementById('painel-secreto').style.display = 'none';
-            // Desabilita arrasto para evitar modificações acidentais fora do painel
-            if (markerEstacionamento) {
-                markerEstacionamento.dragging.disable();
+        }
+
+        // --- MODO DE DESENHO VETORIAL ---
+        function toggleModoDesenho() {
+            modoDesenhoAtivo = !modoDesenhoAtivo;
+            const btn = document.getElementById('btn-modo-desenho');
+            
+            if (modoDesenhoAtivo) {
+                btn.classList.add('ativo');
+                btn.innerHTML = `<i class="fa-solid fa-circle-dot"></i> CLIQUE NO MAPA PARA DESENHAR`;
+                pontosDesenho = [];
+                
+                // Remove o polígono anterior temporariamente para redesenhar
+                if (poligonoEstacionamento) {
+                    mapRadar.removeLayer(poligonoEstacionamento);
+                    poligonoEstacionamento = null;
+                }
+                alert("Modo de desenho ATIVADO! Feche o painel se preferir e clique sequencialmente nos pontos da rua no mapa para desenhar.");
+            } else {
+                btn.classList.remove('ativo');
+                btn.innerHTML = `<i class="fa-solid fa-pen-ruler"></i> Desenhar Área (Clicar no Mapa)`;
             }
         }
 
@@ -514,16 +561,10 @@
             navigator.geolocation.getCurrentPosition(position => {
                 const lat = position.coords.latitude;
                 const lng = position.coords.longitude;
-
-                document.getElementById('config-lat').value = lat.toFixed(6);
-                document.getElementById('config-lng').value = lng.toFixed(6);
-                document.getElementById('config-endereco').value = "MINHA LOCALIZAÇÃO REAL";
-
                 mapRadar.setView([lat, lng], 18);
-                atualizarMarcadoresDoMapa(lat, lng);
-                alert("Geolocalização obtida com sucesso!");
+                alert("Geolocalização obtida! Câmera apontada para sua posição real.");
             }, error => {
-                alert("Falha ao obter GPS. Certifique-se de que a permissão de localização está ativa.");
+                alert("Falha ao obter GPS.");
             }, { enableHighAccuracy: true });
         }
 
@@ -556,13 +597,8 @@
                             const lat = parseFloat(item.lat);
                             const lon = parseFloat(item.lon);
 
-                            document.getElementById('config-lat').value = lat.toFixed(6);
-                            document.getElementById('config-lng').value = lon.toFixed(6);
                             document.getElementById('config-endereco').value = item.display_name.split(',')[0].toUpperCase();
-
                             mapRadar.setView([lat, lon], 18);
-                            atualizarMarcadoresDoMapa(lat, lon);
-
                             resultadosDiv.style.display = 'none';
                         };
                         resultadosDiv.appendChild(itemDiv);
@@ -576,116 +612,101 @@
             }
         }
 
-        function atualizarMarcadoresDoMapa(lat, lng) {
-            if (markerEstacionamento) markerEstacionamento.setLatLng([lat, lng]);
-            if (circuloBase) circuloBase.setLatLng([lat, lng]);
-        }
-
-        function atualizarCirculoPrevia(raio) {
-            const r = parseInt(raio);
-            if (circuloBase && !isNaN(r)) {
-                circuloBase.setRadius(r);
-            }
-        }
-
+        // --- SALVAR POLÍGONO DESENHADO ---
         function salvarConfiguracaoEstacionamento() {
             const endereco = document.getElementById('config-endereco').value.trim();
-            const lat = parseFloat(document.getElementById('config-lat').value);
-            const lng = parseFloat(document.getElementById('config-lng').value);
-            const raio = parseInt(document.getElementById('config-raio').value);
 
-            if (!endereco || isNaN(lat) || isNaN(lng) || isNaN(raio)) {
-                alert("Mestre, verifique os campos inseridos.");
+            if (!endereco) {
+                alert("Mestre, insira um nome para o estacionamento.");
+                return;
+            }
+
+            if (pontosDesenho.length < 3) {
+                alert("Mestre, o desenho precisa ter pelo menos 3 pontos (um triângulo ou polígono completo). Continue clicando no mapa.");
                 return;
             }
 
             db.ref(`lojas/${LOJA_ID}/estacionamento_config`).set({
                 endereco: endereco,
-                lat: lat,
-                lng: lng,
-                raio: raio
+                poligono: pontosDesenho
             }).then(() => {
-                alert("Configuração do Estacionamento salva com sucesso!");
+                alert("Desenho do Estacionamento gravado na nuvem!");
+                if (modoDesenhoAtivo) toggleModoDesenho();
                 fecharPainelSecreto();
             });
         }
 
-        function calcularDistancia(lat1, lon1, lat2, lon2) {
-            const R = 6371e3; 
-            const phi1 = lat1 * Math.PI/180;
-            const phi2 = lat2 * Math.PI/180;
-            const deltaPhi = (lat2-lat1) * Math.PI/180;
-            const deltaLambda = (lon2-lon1) * Math.PI/180;
-
-            const a = Math.sin(deltaPhi/2) * Math.sin(deltaPhi/2) +
-                      Math.cos(phi1) * Math.cos(phi2) *
-                      Math.sin(deltaLambda/2) * Math.sin(deltaLambda/2);
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-            return R * c;
+        // --- ALGORITMO GEOMÉTRICO RAY-CASTING (CONFINAMENTO DE PONTO) ---
+        function isPointInPolygon(point, polygon) {
+            const x = point[0], y = point[1];
+            let inside = false;
+            for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+                const xi = polygon[i][0], yi = polygon[i][1];
+                const xj = polygon[j][0], yj = polygon[j][1];
+                const intersect = ((yi > y) !== (yj > y))
+                    && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+                if (intersect) inside = !inside;
+            }
+            return inside;
         }
 
         // --- INICIALIZAÇÃO DO RADAR EM STANDBY ---
         function inicializarRadar() {
             if (mapRadar) return;
 
+            // Inicializa centralizado nas coordenadas padrão
             mapRadar = L.map('map-radar', {
                 zoomControl: false,
                 attributionControl: false
-            }).setView([configEstacionamento.lat, configEstacionamento.lng], 17);
+            }).setView([-2.9903, -60.0673], 17);
 
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mapRadar);
 
-            // Círculo de cobertura física da rua
-            circuloBase = L.circle([configEstacionamento.lat, configEstacionamento.lng], {
-                color: 'var(--blue)',
-                fillColor: 'var(--gold)',
-                fillOpacity: 0.1,
-                radius: configEstacionamento.raio,
-                weight: 2,
-                dashArray: '5, 5'
-            }).addTo(mapRadar);
+            // Evento de clique para desenhar no mapa em tempo real
+            mapRadar.on('click', function(e) {
+                if (modoDesenhoAtivo) {
+                    const lat = e.latlng.lat;
+                    const lng = e.latlng.lng;
+                    pontosDesenho.push([lat, lng]);
 
-            // Pin físico identificador do Estacionamento JDP (Totalmente Arrastável)
-            const iconEstacionamentoHtml = `
-                <div style="font-size:32px; filter: drop-shadow(0 0 8px rgba(253,224,71,0.8)); text-align:center; cursor: move;">
-                    📍
-                </div>`;
-            
-            markerEstacionamento = L.marker([configEstacionamento.lat, configEstacionamento.lng], {
-                draggable: false, // Inicialmente desabilitado (habilita ao abrir painel)
-                icon: L.divIcon({
-                    html: iconEstacionamentoHtml,
-                    iconSize: [32, 32],
-                    iconAnchor: [16, 32]
-                })
-            }).addTo(mapRadar);
-
-            // Eventos do Arrastar do Marcador
-            markerEstacionamento.on('drag', function(e) {
-                const latlng = e.latlng;
-                if (circuloBase) circuloBase.setLatLng(latlng);
-                document.getElementById('config-lat').value = latlng.lat.toFixed(6);
-                document.getElementById('config-lng').value = latlng.lng.toFixed(6);
-            });
-
-            // Sincronização da configuração de geofence
-            db.ref(`lojas/${LOJA_ID}/estacionamento_config`).on('value', snap => {
-                const config = snap.val();
-                if (config) {
-                    configEstacionamento = config;
-                    document.getElementById('standby-base').innerText = config.endereco.toUpperCase();
-                    if (circuloBase) {
-                        circuloBase.setLatLng([config.lat, config.lng]);
-                        circuloBase.setRadius(config.raio);
+                    if (poligonoEstacionamento) {
+                        poligonoEstacionamento.setLatLngs(pontosDesenho);
+                    } else {
+                        poligonoEstacionamento = L.polygon(pontosDesenho, {
+                            color: 'var(--blue)',
+                            fillColor: 'var(--gold)',
+                            fillOpacity: 0.3,
+                            weight: 3
+                        }).addTo(mapRadar);
                     }
-                    if (markerEstacionamento) {
-                        markerEstacionamento.setLatLng([config.lat, config.lng]);
-                    }
-                    mapRadar.setView([config.lat, config.lng], 17);
                 }
             });
 
-            // Telemetria do Franelinha em Tempo Real
+            // Sincronização e renderização do Polígono Gravado no Firebase
+            db.ref(`lojas/${LOJA_ID}/estacionamento_config`).on('value', snap => {
+                const config = snap.val();
+                if (config && config.poligono) {
+                    configEstacionamento = config;
+                    document.getElementById('standby-base').innerText = config.endereco.toUpperCase();
+                    
+                    if (!modoDesenhoAtivo) {
+                        if (poligonoEstacionamento) {
+                            poligonoEstacionamento.setLatLngs(config.poligono);
+                        } else {
+                            poligonoEstacionamento = L.polygon(config.poligono, {
+                                color: 'var(--blue)',
+                                fillColor: 'var(--gold)',
+                                fillOpacity: 0.15,
+                                weight: 3
+                            }).addTo(mapRadar);
+                        }
+                        // Ajusta a câmera para enquadrar perfeitamente a área desenhada
+                        mapRadar.fitBounds(poligonoEstacionamento.getBounds());
+                    }
+                }
+            });
+
+            // Telemetria do Franelinha em Tempo Real com Geofencing Ativo
             db.ref(`lojas/${LOJA_ID}/motoboy_status`).on('value', snap => {
                 const pos = snap.val();
                 if (pos && pos.online) {
@@ -695,17 +716,16 @@
                     const lat = pos.latitude;
                     const lng = pos.longitude;
 
-                    // Cálculo da distância matemática
-                    const dist = calcularDistancia(lat, lng, configEstacionamento.lat, configEstacionamento.lng);
-                    document.getElementById('standby-distancia').innerText = `${Math.round(dist)}m`;
-
                     const badge = document.getElementById('standby-status-badge');
 
-                    // CONDIÇÃO: Só aparece se estiver no estacionamento/rua (dentro do raio)
-                    if (dist <= configEstacionamento.raio) {
-                        badge.innerText = "DENTRO DA ÁREA";
+                    // Verifica se o Franelinha está dentro do polígono desenhado
+                    const estaDentro = isPointInPolygon([lat, lng], configEstacionamento.poligono || []);
+
+                    if (estaDentro) {
+                        badge.innerText = "DENTRO DO ESTACIONAMENTO";
                         badge.style.color = "var(--green)";
                         badge.style.textShadow = "0 0 10px var(--green)";
+                        document.getElementById('standby-distancia').innerText = "CONFINADO";
 
                         const iconHtml = `
                             <div style="position: relative; width: 45px; height: 45px;">
@@ -729,10 +749,11 @@
                             }));
                         }
                     } else {
-                        // Se estiver fora, remove o marcador para que ele não apareça
-                        badge.innerText = "FORA DA ÁREA";
+                        // Se o Franelinha sair da área desenhada, ele é removido do radar imediatamente
+                        badge.innerText = "FORA DO PERÍMETRO";
                         badge.style.color = "var(--red)";
                         badge.style.textShadow = "0 0 10px var(--red)";
+                        document.getElementById('standby-distancia').innerText = "FORA DA ÁREA";
 
                         if (markerFranelinha) {
                             mapRadar.removeLayer(markerFranelinha);
@@ -922,4 +943,4 @@
         });
     </script>
 </body>
-</html>
+        </html>

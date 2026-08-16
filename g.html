@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="pt-br" style="background-color: #000000 !important;">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>JDP v22.0 - SUPREME SATELLITE RADAR</title>
+              
+    <!-- Firebase, Leaflet e QRCode -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+
+    <style>
+        :root {
+             --gold: #fde047;
+             --blue: #06b6d4;
+             --green: #10b981;
+             --red: #ef4444;
+             --yellow: #ffc107;
+             --dark: #020617;
+        }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
+                 
+        body {
+             background: #000; color: white; font-family: 'Segoe UI', sans-serif;
+             margin: 0; padding: 5px; height: 100vh; display: flex; flex-direction: column;
+             overflow: hidden; border: 4px solid var(--green); transition: border 0.3s;
+        }
+
+        #display-principal { flex: 1; border: 3px solid #333; border-radius: 15px; background: var(--dark); display: flex; flex-direction: column; position: relative; overflow: hidden; }
+                 
+        /* BOTÕES DE CONTROLE SUPERIOR */
+        #btn-power { position: absolute; top: 10px; right: 10px; width: 40px; height: 40px; border-radius: 10px; background: #222; border: 2px solid var(--red); color: var(--red); display: flex; align-items: center; justify-content: center; z-index: 5000; cursor: pointer; }
+        #btn-power.active { color: var(--green); border-color: var(--green); box-shadow: 0 0 10px var(--green); }
+
+        #btn-secreto-satelite { 
+            position: absolute; 
+            top: 10px; 
+            left: 10px; 
+            width: 40px; 
+            height: 40px; 
+            border-radius: 10px; 
+            background: #222; 
+            border: 2px solid var(--blue); 
+            color: var(--blue); 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            z-index: 5000; 
+            cursor: pointer; 
+            box-shadow: 0 0 10px rgba(6, 182, 212, 0.3);
+            transition: all 0.3s ease;
+        }
+        #btn-secreto-satelite:hover {
+            color: var(--gold);
+            border-color: var(--gold);
+            box-shadow: 0 0 15px var(--gold);
+        }
+
+        /* --- TELA OFF / RADAR DE TELEMETRIA --- */
+        #tela-off { position: absolute; width: 100%; height: 100%; background: #000; z-index: 4000; display: flex; flex-direction: column; }
+        #map-radar { width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: 1; }
+        
+        #hud-radar {
+            position: absolute;
+            top: 65px; 
+            left: 15px;
+            background: rgba(2, 6, 23, 0.9);
+            border: 2px solid var(--blue);
+            box-shadow: 0 0 15px rgba(6, 182, 212, 0.4);
+            padding: 10px;
+            border-radius: 8px;
+            z-index: 10;
+            font-size: 11px;
+            width: 240px;
+            pointer-events: none;
+            font-family: monospace;
+        }
+
+        #visor-caixa { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.98); z-index: 4500; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 10px; text-align: center; backdrop-filter: blur(5px); }
+        #qrcode-caixa { background: white; padding: 10px; border-radius: 10px; }
+        .valor-txt { font-size: 45px; font-weight: 900; color: #fff; margin: 5px 0; text-shadow: 0 0 10px var(--gold); }
+
+        #cenario { display: grid; grid-template-rows: 1fr 25px 1fr; flex: 1; padding: 5px; gap: 2px; }
+        .fileira { display: grid; grid-template-columns: repeat(15, 1fr); gap: 1px; }
+        .vaga { border: 1px solid #1a1a1a; border-top: 2px solid var(--yellow); position: relative; display: flex; align-items: center; justify-content: center; height: 100%; }
+        .rua { background: #1a1a1a; display: flex; align-items: center; justify-content: center; font-size: 8px; font-weight: 900; color: #444; }
+
+        .carro-composition { width: 90%; position: relative; animation: driveIn 0.4s ease-out; }
+        .carro-img { width: 100%; display: block; }
+        .cor-layer { position: absolute; top: 18%; left: 12%; width: 76%; height: 55%; mix-blend-mode: color; opacity: 0.95; }
+        .placa-tag { font-size: 5px; font-weight: 900; background: #fff; color: #000; position: absolute; bottom: -2px; left: 50%; transform: translateX(-50%); border: 1px solid #000; padding: 0 1px; }
+
+        @keyframes driveIn { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+        /* BARRA DE PESQUISA HELENA INTELLIGENCE */
+        #container-pesquisa {
+            background: #020617;
+            border-top: 2px solid var(--blue);
+            border-bottom: 1px solid #1e293b;
+            padding: 6px 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            z-index: 100;
+        }
+        #input-busca {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: #fff;
+            font-size: 15px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        #input-busca::placeholder {
+            color: #64748b;
+        }
+
+        /* PAINEL FLUTUANTE DE SUGESTÕES */
+        #sugestoes-flutuantes {
+            display: none;
+            position: absolute;
+            bottom: 95px;
+            left: 10px;
+            right: 10px;
+            background: rgba(2, 6, 23, 0.98);
+            border: 2px solid var(--blue);
+            border-radius: 10px;
+            max-height: 160px;
+            overflow-y: auto;
+            z-index: 4800;
+            box-shadow: 0 -5px 20px rgba(6, 182, 212, 0.4);
+        }
+        .sugestao-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 14px;
+            border-bottom: 1px solid #1e293b;
+            color: #fff;
+            font-weight: bold;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .sugestao-item:hover {
+            background: rgba(6, 182, 212, 0.1);
+        }
+
+        /* PAINEL CONFIGURADOR SECRETO JDP */
+        #painel-secreto {
+            position: fixed;
+            inset: 0;
+            background: rgba(2, 6, 23, 0.95);
+            z-index: 6000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(10px);
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .secret-card {
+            background: #0b1329;
+            border: 3px solid var(--gold);
+            box-shadow: 0 0 50px rgba(253, 224, 71, 0.3);
+            border-radius: 12px;
+            width: 100%;
+            max-width: 420px;
+            padding: 25px;
+            color: #fff;
+        }
+
+        .secret-card h3 {
+            font-family: 'Orbitron', sans-serif;
+            color: var(--gold);
+            text-align: center;
+            margin-bottom: 15px;
+            letter-spacing: 2px;
+            border-bottom: 2px solid var(--gold);
+            padding-bottom: 8px;
+        }
+
+        .input-group {
+            margin-bottom: 12px;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 10px;
+            color: var(--blue);
+            margin-bottom: 4px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 10px;
+            background: rgba(2, 6, 23, 0.8);
+            border: 1px solid #1e293b;
+            color: #fff;
+            border-radius: 6px;
+            outline: none;
+            box-sizing: border-box;
+            font-family: monospace;
+        }
+
+        .search-row {
+            display: flex;
+            gap: 8px;
+        }
+        .btn-search {
+            background: var(--blue);
+            color: #000;
+            border: none;
+            font-weight: bold;
+            padding: 0 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: 'Orbitron', sans-serif;
+            text-transform: uppercase;
+            font-size: 11px;
+        }
+
+        /* CONTAINER DE RESULTADOS DE BUSCA */
+        #resultados-busca {
+            max-height: 120px;
+            overflow-y: auto;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #1e293b;
+            border-radius: 6px;
+            margin-top: 5px;
+            display: none;
+        }
+        .resultado-item {
+            padding: 8px;
+            border-bottom: 1px solid #1e293b;
+            font-size: 10px;
+            cursor: pointer;
+            color: #cbd5e1;
+            transition: 0.2s;
+        }
+        .resultado-item:hover {
+            background: rgba(6, 182, 212, 0.2);
+            color: #fff;
+        }
+
+        .btn-gps {
+            width: 100%;
+            padding: 10px;
+            background: rgba(16, 185, 129, 0.2);
+            border: 1px solid var(--green);
+            color: var(--green);
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            text-transform: uppercase;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 10px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: 0.3s;
+        }
+        .btn-gps:hover {
+            background: var(--green);
+            color: #000;
+            box-shadow: 0 0 15px var(--green);
+        }
+
+        .secret-btn {
+            width: 100%;
+            padding: 12px;
+            background: var(--gold);
+            color: #000;
+            border: none;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 900;
+            cursor: pointer;
+            text-transform: uppercase;
+            border-radius: 6px;
+            margin-top: 10px;
+            transition: 0.3s;
+        }
+
+        .secret-btn:hover {
+            background: #fff;
+            box-shadow: 0 0 20px var(--gold);
+        }
+
+        .close-secret {
+            text-align: center;
+            margin-top: 15px;
+            font-size: 11px;
+            color: var(--red);
+            cursor: pointer;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+
+        .area-teclado { background: var(--yellow); padding: 8px; border-radius: 15px 15px 0 0; display: grid; grid-template-columns: 3fr 1fr; gap: 8px; z-index: 100; }
+        .grid-numerico { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+        .grid-acoes { display: flex; flex-direction: column; gap: 4px; }
+
+        .btn-tecla { height: 50px; border: none; border-radius: 8px; background: linear-gradient(145deg, #333, #000); color: var(--gold); font-weight: 900; font-size: 18px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 3px 0 #000; cursor: pointer; }
+        .btn-tecla:active { transform: translateY(2px); box-shadow: 0 1px 0 #000; }
+        .sub { font-size: 6px; color: var(--blue); line-height: 1; margin-top: 2px; }
+
+        #visor-input { background: #000; padding: 5px; border-top: 2px solid var(--yellow); text-align: center; font-size: 24px; font-weight: 900; color: var(--gold); height: 40px; }
+        
+        .leaflet-tile {
+            filter: invert(90%) hue-rotate(180deg) brightness(0.9) contrast(1.1);
+        }
+        .leaflet-div-icon {
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+        }
+    </style>
+
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#bf953f">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="icon" sizes="192x192" href="icon-192.png">
+    <link rel="icon" sizes="512x512" href="icon-512.png">
+    <link rel="apple-touch-icon" href="icon-192.png">
+</head>
+<body>
+
+    <div id="display-principal">
+        <!-- BOTÃO DE STANDBY / ENTRAR EM MODO RADAR -->
+        <div id="btn-power" class="active" onclick="togglePower()"><i class="fas fa-power-off"></i></div>
+
+        <!-- BOTÃO SECRETO DE SATÉLITE JDP (CANTO SUPERIOR ESQUERDO) -->
+        <div id="btn-secreto-satelite" title="Mapeamento de Rua JDP" onclick="abrirPainelSecreto()"><i class="fa-solid fa-satellite-dish"></i></div>
+                 
+        <!-- TELA OFF / RADAR DE TELEMETRIA JDP -->
+        <div id="tela-off">
+            <div id="map-radar"></div>
+            <div id="hud-radar">
+                <div style="font-family: 'Orbitron'; color: var(--gold); font-weight: 900; border-bottom: 1px dashed var(--blue); padding-bottom: 4px; margin-bottom: 6px; display: flex; justify-content: space-between;">
+                    <span>MONITORAMENTO</span>
+                    <span id="standby-status-badge" style="color: var(--red);">FORA DA ÁREA</span>
+                </div>
+                <div style="margin-bottom: 4px;"><i class="fa-solid fa-user-shield text-cyan"></i> Franela: <span id="standby-nome" style="font-weight: bold; color: #fff;">BUSCANDO...</span></div>
+                <div style="margin-bottom: 4px;"><i class="fa-solid fa-compass text-gold"></i> Distância: <span id="standby-distancia" style="font-weight: bold; color: #fff;">0m</span></div>
+                <div><i class="fa-solid fa-road text-cyan"></i> Rua Mapeada: <span id="standby-base" style="font-size: 9px; color: #94a3b8;">BUSCANDO...</span></div>
+            </div>
+        </div>
+                 
+        <div id="visor-caixa">
+            <div style="color:var(--gold); font-weight: 900; font-size: 14px;">PAGAMENTO PIX</div>
+            <div id="qrcode-caixa"></div>
+            <div class="valor-txt" id="valor-display">R$ 0,00</div>
+            <div id="info-venda" style="color:var(--blue); font-size:11px; margin-bottom: 10px;"></div>
+            <button onclick="enviarWhatsApp()" style="background:#25d366; color:white; border:none; padding:8px; border-radius:5px; width:80%; font-weight:bold;">ENVIAR WHATSAPP</button>
+            <button onclick="resetTudo()" style="background:var(--red); color:white; border:none; padding:5px; border-radius:5px; width:40%; font-size:8px; margin-top:10px;">CANCELAR</button>
+        </div>
+
+        <div id="cenario">
+            <div id="fileira-a" class="fileira"></div>
+            <div class="rua">JDP SUPREME PARK</div>
+            <div id="fileira-b" class="fileira"></div>
+        </div>
+
+        <!-- PAINEL DE SUGESTÕES FLUTUANTES -->
+        <div id="sugestoes-flutuantes"></div>
+
+        <!-- BARRA DE PESQUISA HELENA (ACIMA DO VISOR DE ENTRADA) -->
+        <div id="container-pesquisa">
+            <i class="fas fa-search" style="color: var(--blue); font-size: 14px;"></i>
+            <input type="text" id="input-busca" placeholder="BUSCAR NÚMERO OU PLACA..." oninput="filtrarPlacasBusca(this.value)">
+            <i class="fas fa-times" onclick="limparBusca()" style="color: var(--red); font-size: 14px; cursor: pointer;"></i>
+        </div>
+
+        <div id="visor-input">---</div>
+    </div>
+
+    <div class="area-teclado">
+        <div class="grid-numerico">
+            <button onclick="press('1')" class="btn-tecla">1<span class="sub">BRANCO</span></button>
+            <button onclick="press('2')" class="btn-tecla">2<span class="sub">PRETO</span></button>
+            <button onclick="press('3')" class="btn-tecla">3<span class="sub">VERMELHO</span></button>
+            <button onclick="press('4')" class="btn-tecla">4<span class="sub">AZUL</span></button>
+            <button onclick="press('5')" class="btn-tecla">5<span class="sub">VERDE</span></button>
+            <button onclick="press('6')" class="btn-tecla">6<span class="sub">PRATA</span></button>
+            <button onclick="press('7')" class="btn-tecla">7<span class="sub">CINZA</span></button>
+            <button onclick="press('8')" class="btn-tecla">8<span class="sub">OURO</span></button>
+            <button onclick="press('9')" class="btn-tecla">9<span class="sub">BEGE</span></button>
+            <button onclick="resetTudo()" class="btn-tecla" style="background:#b71c1c; color:#fff;">X<span class="sub" style="color:#fff">CANCEL</span></button>
+            <button onclick="press('0')" class="btn-tecla">0<span class="sub">OUTROS</span></button>
+            <button onclick="confirmarAcao()" class="btn-tecla" style="background:#ffb300; color:#000;">OK<span class="sub">ENTER</span></button>
+        </div>
+
+        <div class="grid-acoes">
+            <button onclick="finalizar('PIX')" class="btn-tecla" style="color:var(--blue);">PIX</button>
+            <button onclick="finalizar('CASH')" class="btn-tecla" style="color:var(--green);">CASH</button>
+            <button onclick="finalizar('CARD')" class="btn-tecla" style="color:#fff;">CARD</button>
+            <button onclick="conectarBT()" class="btn-tecla"><i class="fas fa-print"></i></button>
+        </div>
+    </div>
+
+    <!-- PAINEL CONFIGURADOR SECRETO JDP -->
+    <div id="painel-secreto">
+        <div class="secret-card">
+            <h3>PAINEL DE ENGENHARIA</h3>
+            
+            <!-- COORDENADAS GPS REAL DO CELULAR -->
+            <button class="btn-gps" onclick="capturarGpsDispositivo()">
+                <i class="fa-solid fa-location-crosshairs"></i> Usar minha Localização Real
+            </button>
+
+            <!-- BUSCA POR NOME DE RUA -->
+            <div class="input-group">
+                <label>Pesquisar Nome da Rua:</label>
+                <div class="search-row">
+                    <input type="text" id="config-busca-rua" placeholder="Ex: Avenida Eduardo Ribeiro, Manaus">
+                    <button class="btn-search" onclick="buscarRuaPorSatelite()">Rastrear</button>
+                </div>
+                <!-- LISTA DE RESULTADOS DA BUSCA -->
+                <div id="resultados-busca"></div>
+            </div>
+
+            <div class="input-group">
+                <label>Nome do Estacionamento / Rua:</label>
+                <input type="text" id="config-endereco" placeholder="Ex: ESTACIONAMENTO CENTRAL PRADO">
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div class="input-group">
+                    <label>Latitude:</label>
+                    <input type="text" id="config-lat" placeholder="-2.9903" readonly style="background: rgba(0,0,0,0.5); border-color: var(--blue);">
+                </div>
+                <div class="input-group">
+                    <label>Longitude:</label>
+                    <input type="text" id="config-lng" placeholder="-60.0673" readonly style="background: rgba(0,0,0,0.5); border-color: var(--blue);">
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label>Largura do Estacionamento (Metros):</label>
+                <input type="number" id="config-raio" placeholder="50" value="50" oninput="atualizarCirculoPrevia(this.value)">
+            </div>
+
+            <p style="font-size: 9px; color: var(--gold); text-align: center; margin-top: 5px; text-transform: uppercase;">💡 Dica: O senhor pode arrastar o pino vermelho 📍 diretamente no mapa para desenhar o perímetro exato.</p>
+
+            <button class="secret-btn" onclick="salvarConfiguracaoEstacionamento()">SALVAR CONFIGURAÇÃO</button>
+            <div class="close-secret" onclick="fecharPainelSecreto()">FECHAR PAINEL [X]</div>
+        </div>
+    </div>
+
+    <script>
+        const firebaseConfig = { apiKey: "", databaseURL: "https://dony-burguers-default-rtdb.firebaseio.com" };
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        const LOJA_ID = "PARKING_JDP_02";
+        const CHAVE_PIX = "Pradolindalva4@gmail.com";
+        const IMG_CAR = "https://raw.githubusercontent.com/pradodalapa-hue/fotos-industrial/main/img/jdp_1786596222911_jdp_1781301172914_Screenshot_20260413_155521_Chrome_Beta.jpg";
+        
+        const FOTO_FRANELINHA = "https://raw.githubusercontent.com/pradodalapa-hue/fotos-industrial/main/img/jdp_1786891045517_icon_192.png";
+
+        let etapa = 0, placaTmp = "", corTmp = "", sessaoSaida = null, charBT = null;
+        let mapRadar = null, markerFranelinha = null, markerEstacionamento = null, circuloBase = null;
+
+        let configEstacionamento = {
+            endereco: "ESTACIONAMENTO CENTRAL JDP",
+            lat: -2.9903,
+            lng: -60.0673,
+            raio: 50
+        };
+
+        function abrirPainelSecreto() {
+            document.getElementById('painel-secreto').style.display = 'flex';
+            document.getElementById('config-endereco').value = configEstacionamento.endereco;
+            document.getElementById('config-lat').value = configEstacionamento.lat;
+            document.getElementById('config-lng').value = configEstacionamento.lng;
+            document.getElementById('config-raio').value = configEstacionamento.raio;
+            
+            // Habilita movimentação física do marcador de engenharia
+            if (markerEstacionamento) {
+                markerEstacionamento.dragging.enable();
+            }
+
+            if (mapRadar) {
+                setTimeout(() => { mapRadar.invalidateSize(); }, 200);
+            }
+        }
+
+        function fecharPainelSecreto() {
+            document.getElementById('painel-secreto').style.display = 'none';
+            // Desabilita arrasto para evitar modificações acidentais fora do painel
+            if (markerEstacionamento) {
+                markerEstacionamento.dragging.disable();
+            }
+        }
+
+        // --- CAPTURA DE GPS REAL DO DISPOSITIVO ---
+        function capturarGpsDispositivo() {
+            if (!navigator.geolocation) {
+                alert("Mestre, a geolocalização não é suportada por este dispositivo.");
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(position => {
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
+
+                document.getElementById('config-lat').value = lat.toFixed(6);
+                document.getElementById('config-lng').value = lng.toFixed(6);
+                document.getElementById('config-endereco').value = "MINHA LOCALIZAÇÃO REAL";
+
+                mapRadar.setView([lat, lng], 18);
+                atualizarMarcadoresDoMapa(lat, lng);
+                alert("Geolocalização obtida com sucesso!");
+            }, error => {
+                alert("Falha ao obter GPS. Certifique-se de que a permissão de localização está ativa.");
+            }, { enableHighAccuracy: true });
+        }
+
+        // --- SATÉLITE DE BUSCA COM MÚLTIPLOS RESULTADOS ---
+        async function buscarRuaPorSatelite() {
+            const ruaInput = document.getElementById('config-busca-rua').value.trim();
+            const resultadosDiv = document.getElementById('resultados-busca');
+            
+            if (!ruaInput) {
+                alert("Mestre, digite o nome da rua ou local.");
+                return;
+            }
+
+            resultadosDiv.innerHTML = "<div style='padding:8px; font-size:10px;'>Buscando satélites...</div>";
+            resultadosDiv.style.display = 'block';
+
+            try {
+                const query = encodeURIComponent(ruaInput);
+                const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${query}&limit=5&countrycodes=br`);
+                const data = await response.json();
+
+                resultadosDiv.innerHTML = "";
+
+                if (data && data.length > 0) {
+                    data.forEach(item => {
+                        const itemDiv = document.createElement('div');
+                        itemDiv.className = "resultado-item";
+                        itemDiv.innerText = item.display_name.toUpperCase();
+                        itemDiv.onclick = () => {
+                            const lat = parseFloat(item.lat);
+                            const lon = parseFloat(item.lon);
+
+                            document.getElementById('config-lat').value = lat.toFixed(6);
+                            document.getElementById('config-lng').value = lon.toFixed(6);
+                            document.getElementById('config-endereco').value = item.display_name.split(',')[0].toUpperCase();
+
+                            mapRadar.setView([lat, lon], 18);
+                            atualizarMarcadoresDoMapa(lat, lon);
+
+                            resultadosDiv.style.display = 'none';
+                        };
+                        resultadosDiv.appendChild(itemDiv);
+                    });
+                } else {
+                    resultadosDiv.innerHTML = "<div style='padding:8px; font-size:10px; color:var(--red);'>Nenhum resultado encontrado.</div>";
+                }
+            } catch (error) {
+                console.error(error);
+                resultadosDiv.innerHTML = "<div style='padding:8px; font-size:10px; color:var(--red);'>Erro na varredura.</div>";
+            }
+        }
+
+        function atualizarMarcadoresDoMapa(lat, lng) {
+            if (markerEstacionamento) markerEstacionamento.setLatLng([lat, lng]);
+            if (circuloBase) circuloBase.setLatLng([lat, lng]);
+        }
+
+        function atualizarCirculoPrevia(raio) {
+            const r = parseInt(raio);
+            if (circuloBase && !isNaN(r)) {
+                circuloBase.setRadius(r);
+            }
+        }
+
+        function salvarConfiguracaoEstacionamento() {
+            const endereco = document.getElementById('config-endereco').value.trim();
+            const lat = parseFloat(document.getElementById('config-lat').value);
+            const lng = parseFloat(document.getElementById('config-lng').value);
+            const raio = parseInt(document.getElementById('config-raio').value);
+
+            if (!endereco || isNaN(lat) || isNaN(lng) || isNaN(raio)) {
+                alert("Mestre, verifique os campos inseridos.");
+                return;
+            }
+
+            db.ref(`lojas/${LOJA_ID}/estacionamento_config`).set({
+                endereco: endereco,
+                lat: lat,
+                lng: lng,
+                raio: raio
+            }).then(() => {
+                alert("Configuração do Estacionamento salva com sucesso!");
+                fecharPainelSecreto();
+            });
+        }
+
+        function calcularDistancia(lat1, lon1, lat2, lon2) {
+            const R = 6371e3; 
+            const phi1 = lat1 * Math.PI/180;
+            const phi2 = lat2 * Math.PI/180;
+            const deltaPhi = (lat2-lat1) * Math.PI/180;
+            const deltaLambda = (lon2-lon1) * Math.PI/180;
+
+            const a = Math.sin(deltaPhi/2) * Math.sin(deltaPhi/2) +
+                      Math.cos(phi1) * Math.cos(phi2) *
+                      Math.sin(deltaLambda/2) * Math.sin(deltaLambda/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        }
+
+        // --- INICIALIZAÇÃO DO RADAR EM STANDBY ---
+        function inicializarRadar() {
+            if (mapRadar) return;
+
+            mapRadar = L.map('map-radar', {
+                zoomControl: false,
+                attributionControl: false
+            }).setView([configEstacionamento.lat, configEstacionamento.lng], 17);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mapRadar);
+
+            // Círculo de cobertura física da rua
+            circuloBase = L.circle([configEstacionamento.lat, configEstacionamento.lng], {
+                color: 'var(--blue)',
+                fillColor: 'var(--gold)',
+                fillOpacity: 0.1,
+                radius: configEstacionamento.raio,
+                weight: 2,
+                dashArray: '5, 5'
+            }).addTo(mapRadar);
+
+            // Pin físico identificador do Estacionamento JDP (Totalmente Arrastável)
+            const iconEstacionamentoHtml = `
+                <div style="font-size:32px; filter: drop-shadow(0 0 8px rgba(253,224,71,0.8)); text-align:center; cursor: move;">
+                    📍
+                </div>`;
+            
+            markerEstacionamento = L.marker([configEstacionamento.lat, configEstacionamento.lng], {
+                draggable: false, // Inicialmente desabilitado (habilita ao abrir painel)
+                icon: L.divIcon({
+                    html: iconEstacionamentoHtml,
+                    iconSize: [32, 32],
+                    iconAnchor: [16, 32]
+                })
+            }).addTo(mapRadar);
+
+            // Eventos do Arrastar do Marcador
+            markerEstacionamento.on('drag', function(e) {
+                const latlng = e.latlng;
+                if (circuloBase) circuloBase.setLatLng(latlng);
+                document.getElementById('config-lat').value = latlng.lat.toFixed(6);
+                document.getElementById('config-lng').value = latlng.lng.toFixed(6);
+            });
+
+            // Sincronização da configuração de geofence
+            db.ref(`lojas/${LOJA_ID}/estacionamento_config`).on('value', snap => {
+                const config = snap.val();
+                if (config) {
+                    configEstacionamento = config;
+                    document.getElementById('standby-base').innerText = config.endereco.toUpperCase();
+                    if (circuloBase) {
+                        circuloBase.setLatLng([config.lat, config.lng]);
+                        circuloBase.setRadius(config.raio);
+                    }
+                    if (markerEstacionamento) {
+                        markerEstacionamento.setLatLng([config.lat, config.lng]);
+                    }
+                    mapRadar.setView([config.lat, config.lng], 17);
+                }
+            });
+
+            // Telemetria do Franelinha em Tempo Real
+            db.ref(`lojas/${LOJA_ID}/motoboy_status`).on('value', snap => {
+                const pos = snap.val();
+                if (pos && pos.online) {
+                    const nome = pos.nome || "OPERADOR JDP";
+                    document.getElementById('standby-nome').innerText = nome.toUpperCase();
+                    
+                    const lat = pos.latitude;
+                    const lng = pos.longitude;
+
+                    // Cálculo da distância matemática
+                    const dist = calcularDistancia(lat, lng, configEstacionamento.lat, configEstacionamento.lng);
+                    document.getElementById('standby-distancia').innerText = `${Math.round(dist)}m`;
+
+                    const badge = document.getElementById('standby-status-badge');
+
+                    // CONDIÇÃO: Só aparece se estiver no estacionamento/rua (dentro do raio)
+                    if (dist <= configEstacionamento.raio) {
+                        badge.innerText = "DENTRO DA ÁREA";
+                        badge.style.color = "var(--green)";
+                        badge.style.textShadow = "0 0 10px var(--green)";
+
+                        const iconHtml = `
+                            <div style="position: relative; width: 45px; height: 45px;">
+                                <img src="${FOTO_FRANELINHA}" style="width: 45px; height: 45px; border-radius: 50%; border: 3px solid var(--green); box-shadow: 0 0 15px var(--green); background: #000; display: block;">
+                            </div>`;
+
+                        if (!markerFranelinha) {
+                            markerFranelinha = L.marker([lat, lng], {
+                                icon: L.divIcon({
+                                    html: iconHtml,
+                                    iconSize: [45, 45],
+                                    iconAnchor: [22, 22]
+                                })
+                            }).addTo(mapRadar);
+                        } else {
+                            markerFranelinha.setLatLng([lat, lng]);
+                            markerFranelinha.setIcon(L.divIcon({
+                                html: iconHtml,
+                                iconSize: [45, 45],
+                                iconAnchor: [22, 22]
+                            }));
+                        }
+                    } else {
+                        // Se estiver fora, remove o marcador para que ele não apareça
+                        badge.innerText = "FORA DA ÁREA";
+                        badge.style.color = "var(--red)";
+                        badge.style.textShadow = "0 0 10px var(--red)";
+
+                        if (markerFranelinha) {
+                            mapRadar.removeLayer(markerFranelinha);
+                            markerFranelinha = null;
+                        }
+                    }
+                }
+            });
+        }
+
+        // --- FILTRAR PLACAS ---
+        function filtrarPlacasBusca(termo) {
+            const painel = document.getElementById('sugestoes-flutuantes');
+            if (!termo) {
+                painel.style.display = 'none';
+                return;
+            }
+                         
+            const patioLocal = JSON.parse(localStorage.getItem('jdp_patio')) || {};
+            const chaves = Object.keys(patioLocal);
+            const filtradas = chaves.filter(placa => placa.toUpperCase().includes(termo.toUpperCase()));
+
+            if (filtradas.length === 0) {
+                painel.style.display = 'none';
+                return;
+            }
+
+            painel.innerHTML = "";
+            filtradas.forEach(placa => {
+                const dados = patioLocal[placa];
+                const item = document.createElement('div');
+                item.className = "sugestao-item";
+                item.innerHTML = `
+                    <span><i class="fas fa-car" style="color: var(--blue); margin-right: 8px;"></i>${placa.toUpperCase()} <small style="color:var(--gold); font-size:9px; margin-left: 5px;">(${dados.cor})</small></span>
+                    <button class="btn-cobrar-sugestao" onclick="abrirCobrancaDireta('${placa}')">
+                        COBRAR <i class="fas fa-arrow-right"></i>
+                    </button>
+                `;
+                painel.appendChild(item);
+            });
+            painel.style.display = 'block';
+        }
+
+        function limparBusca() {
+            document.getElementById('input-busca').value = "";
+            document.getElementById('sugestoes-flutuantes').style.display = 'none';
+        }
+
+        function abrirCobrancaDireta(placa) {
+            const patioLocal = JSON.parse(localStorage.getItem('jdp_patio')) || {};
+            if (patioLocal[placa]) {
+                const d = patioLocal[placa];
+                const horas = Math.ceil((Date.now() - d.time) / 3600000) || 1;
+                const valor = horas * 10.00;
+                sessaoSaida = { ...d, valor, horas };
+                                 
+                document.getElementById('valor-display').innerText = `R$ ${valor.toFixed(2).replace('.', ',')}`;
+                document.getElementById('info-venda').innerText = `PLACA: ${d.cod} | ${horas}H`;
+                document.getElementById('visor-caixa').style.display = 'flex';
+                gerarQR(valor);
+                limparBusca();
+            }
+        }
+
+        function confirmarAcao() {
+            const patioLocal = JSON.parse(localStorage.getItem('jdp_patio')) || {};
+            if(etapa === 1 && patioLocal[placaTmp]) {
+                abrirCobrancaDireta(placaTmp);
+            }
+            else if(etapa === 1 && placaTmp.length >= 2) {
+                etapa = 2; document.getElementById('visor-input').innerText = "QUAL A COR?";
+            }
+            else if(etapa === 2 && corTmp) {
+                const novo = {cod: placaTmp.toUpperCase(), cor: corTmp, time: Date.now()};
+                patioLocal[placaTmp] = novo;
+                localStorage.setItem('jdp_patio', JSON.stringify(patioLocal));
+                renderizarPatio(patioLocal);
+                db.ref(`lojas/${LOJA_ID}/parking/patio/${placaTmp}`).set(novo);
+                if(charBT) imprimirTicketComQR(placaTmp, corTmp);
+                resetTudo();
+            }
+        }
+
+        async function imprimirTicketComQR(cod, cor) {
+            if(!charBT) return;
+            let enc = new TextEncoder();
+            let centralizar = new Uint8Array([0x1b, 0x61, 0x01]);
+            let reset = new Uint8Array([0x1b, 0x61, 0x00]);
+                         
+            let qrCmd = new Uint8Array([
+                0x1d, 0x28, 0x6b, 0x03, 0x00, 0x31, 0x43, 0x06, 
+                0x1d, 0x28, 0x6b, cod.length + 3, 0x00, 0x31, 0x50, 0x30, ...enc.encode(cod), 
+                0x1d, 0x28, 0x6b, 0x03, 0x00, 0x31, 0x51, 0x30
+            ]);
+
+            let m = `\nJDP PARKING\n----------------\nPLACA: ${cod}\nCOR: ${cor}\n${new Date().toLocaleString()}\n----------------\n`;
+                         
+            await charBT.writeValue(centralizar);
+            await charBT.writeValue(enc.encode(m));
+            await charBT.writeValue(qrCmd);
+            await charBT.writeValue(enc.encode("\nGUARDE ESTE TICKET\n\n\n\n"));
+            await charBT.writeValue(reset);
+        }
+
+        function renderizarPatio(data) {
+            const fA = document.getElementById('fileira-a');
+            const fB = document.getElementById('fileira-b');
+            fA.innerHTML = ""; fB.innerHTML = "";
+            const chaves = Object.keys(data);
+            const hex = {"BRANCO":"#eee","PRETO":"#111","VERMELHO":"#d00","AZUL":"#005eff","VERDE":"#008000","PRATA":"#a9a9a9","CINZA":"#444","OURO":"#ffd700","BEGE":"#f5f5dc"};
+            for(let i=0; i<60; i++) {
+                const v = document.createElement('div'); v.className = "vaga";
+                if(chaves[i]) {
+                    const p = chaves[i]; const c = data[p].cor;
+                    v.innerHTML = `<div class="carro-composition"><img src="${IMG_CAR}" class="carro-img"><div class="cor-layer" style="background:${hex[c]||'#555'}"></div><div class="placa-tag">${p}</div></div>`;
+                }
+                if(i < 30) fA.appendChild(v); else fB.appendChild(v);
+            }
+        }
+
+        function press(val) {
+            if(sessaoSaida) return;
+            if(etapa <= 1) { etapa = 1; placaTmp += val; document.getElementById('visor-input').innerText = placaTmp; }
+            else if(etapa === 2) {
+                const cores = {"1":"BRANCO","2":"PRETO","3":"VERMELHO","4":"AZUL","5":"VERDE","6":"PRATA","7":"CINZA","8":"OURO","9":"BEGE","0":"OUTRO"};
+                corTmp = cores[val]; document.getElementById('visor-input').innerText = corTmp;
+            }
+        }
+
+        function finalizar(metodo) {
+            if(!sessaoSaida) return;
+            const patio = JSON.parse(localStorage.getItem('jdp_patio')) || {};
+            delete patio[sessaoSaida.cod];
+            localStorage.setItem('jdp_patio', JSON.stringify(patio));
+            renderizarPatio(patio);
+            db.ref(`lojas/${LOJA_ID}/parking/patio/${sessaoSaida.cod}`).remove();
+            resetTudo();
+        }
+
+        function gerarQR(valor) {
+            const v = valor.toFixed(2);
+            const f = (id, val) => id + val.length.toString().padStart(2, '0') + val;
+            const payload = "000201" + f("26", f("00", "br.gov.bcb.pix") + f("01", CHAVE_PIX)) + "520400005303986" + f("54", v) + "5802BR" + f("59", "JOSE DIVINO") + f("60", "MANAUS") + "62070503***6304";
+            document.getElementById('qrcode-caixa').innerHTML = "";
+            new QRCode(document.getElementById('qrcode-caixa'), { text: payload, width: 150, height: 150 });
+        }
+
+        function togglePower() {
+            const off = document.getElementById('tela-off');
+            const btn = document.getElementById('btn-power');
+            const isHidden = (off.style.display === 'none');
+            
+            off.style.display = isHidden ? 'flex' : 'none';
+            btn.classList.toggle('active');
+
+            if (isHidden && mapRadar) {
+                setTimeout(() => { mapRadar.invalidateSize(); }, 200);
+            }
+        }
+
+        async function conectarBT() {
+            try {
+                const device = await navigator.bluetooth.requestDevice({ filters: [{ namePrefix: '58' }, { namePrefix: 'Bluetooth' }], optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb'] });
+                const server = await device.gatt.connect();
+                const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
+                charBT = (await service.getCharacteristics()).find(c => c.properties.write);
+                alert("IMPRESSORA PRONTA");
+            } catch (e) { alert("ERRO BT"); }
+        }
+
+        function resetTudo() {
+            etapa = 0; placaTmp = ""; corTmp = ""; sessaoSaida = null;
+            document.getElementById('visor-caixa').style.display = 'none';
+            document.getElementById('visor-input').innerText = "---";
+            limparBusca();
+        }
+
+        // --- INICIALIZAÇÃO DO SISTEMA ---
+        window.addEventListener('load', () => {
+            inicializarRadar();
+            
+            db.ref(`lojas/${LOJA_ID}/parking/patio`).on('value', snap => {
+                const data = snap.val() || {};
+                localStorage.setItem('jdp_patio', JSON.stringify(data));
+                renderizarPatio(data);
+            });
+        });
+    </script>
+</body>
+</html>

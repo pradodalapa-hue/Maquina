@@ -1,1601 +1,402 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta name="theme-color" content="#020617">
-    <title>HELENA PDV v10.0 - HARMONY MATRIX</title>
-                          
-    <!-- Dependências Locais/Offline para Geração de QRCode e Captura -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>JDP SMART INDUSTRIAL - V49 CELEBRATION NFC</title>
+    <!-- Firebase Compat v9 -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <!-- Motores Gráficos e Captura -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-
+    
     <style>
-        /* ESTÉTICA INDUSTRIAL WHITE & CYAN MATRIX EXCLUSIVA - JDP */
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: 'Fira Code', 'Consolas', monospace;
-            -webkit-tap-highlight-color: transparent;
+        :root { 
+            --ouro: #fde047; 
+            --carcaca: #ffcc00; 
+            --tela-fundo: #FFFFFF; 
+            --verde: #00a859; 
+            --vermelho: #e81c24; 
+            --preto-pos: #020617; 
+            --azul: #06b6d4; 
         }
-
-        html, body {
-            width: 100%;
-            height: 100%;
-            background-color: #020617;
-            overflow: hidden;
+        * { box-sizing: border-box; margin: 0; padding: 0; outline: none; font-family: 'Segoe UI', sans-serif; }
+        body, html { background: #000; height: 100vh; width: 100vw; overflow: hidden; display: flex; justify-content: center; align-items: center; }
+        
+        .smart-pos { 
+            background: var(--carcaca); width: 100%; max-width: 480px; height: 100%; 
+            display: flex; flex-direction: column; padding: 10px; box-shadow: inset 0 0 20px rgba(0,0,0,0.3);
         }
-
-        body {
-            color: #ffffff;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            padding: 1rem;
-            position: relative;
-            -webkit-overflow-scrolling: touch;
-        }
-
-        @media (min-width: 768px) {
-            body {
-                padding: 1.5rem;
-            }
-        }
-
-        /* CABEÇALHO */
-        header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            width: 100%;
-            max-width: 42rem;
-            margin-left: auto;
-            margin-right: auto;
-            z-index: 10;
-            height: 40px;
-            border-bottom: 1px solid #06b6d4;
-            padding-bottom: 0.5rem;
-            flex-shrink: 0;
-        }
-
-        .status-container {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .status-led {
-            width: 8px;
-            height: 8px;
-            background-color: #06b6d4;
-            border-radius: 50%;
-            box-shadow: 0 0 8px #06b6d4;
-            transition: all 0.2s ease;
-        }
-
-        .status-led.listening {
-            background-color: #ff0000;
-            box-shadow: 0 0 12px #ff0000;
-        }
-
-        .status-led.speaking {
-            background-color: #fde047;
-            box-shadow: 0 0 12px #fde047;
-        }
-
-        .status-text {
-            font-size: 9px;
-            color: #06b6d4;
-            font-weight: bold;
-            letter-spacing: 0.1em;
-        }
-
-        .header-actions {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .btn-panel-toggle {
-            background: #000000;
-            border: 1px solid #06b6d4;
-            color: #06b6d4;
-            padding: 4px 8px;
-            font-size: 9px;
-            font-weight: bold;
-            border-radius: 4px;
-            cursor: pointer;
-            text-transform: uppercase;
-            transition: all 0.2s;
-        }
-
-        .btn-panel-toggle:hover {
-            background: #06b6d4;
-            color: #000000;
-            box-shadow: 0 0 8px #06b6d4;
-        }
-
-        .btn-pos-toggle {
-            background: #000000;
-            border: 1px solid #fde047;
-            color: #fde047;
-            padding: 4px 8px;
-            font-size: 9px;
-            font-weight: bold;
-            border-radius: 4px;
-            cursor: pointer;
-            text-transform: uppercase;
-            transition: all 0.2s;
-        }
-
-        .btn-pos-toggle:hover {
-            background: #fde047;
-            color: #000000;
-            box-shadow: 0 0 8px #fde047;
-        }
-
-        .creator-tag {
-            font-size: 9px;
-            font-weight: bold;
-            color: #fde047;
-            text-shadow: 0 0 8px rgba(253, 224, 71, 0.3);
-        }
-
-        /* ÁREA CENTRAL */
-        main {
-            flex-grow: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: space-between;
-            width: 100%;
-            max-width: 42rem;
-            margin-left: auto;
-            margin-right: auto;
-            padding-top: 0.75rem;
-            padding-bottom: 0.75rem;
-            z-index: 10;
-            overflow: hidden;
-            position: relative;
-        }
-
-        #interaction-deck {
-            width: 100%;
-            flex-grow: 1;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            gap: 0.5rem;
-            overflow: hidden;
-        }
-
-        /* CONSOLE DE RESPOSTA DA HELENA */
-        .response-container {
-            width: 100%;
-            flex-grow: 1;
-            overflow-y: auto;
-            padding: 1.25rem;
-            background-color: #000000;
-            border: 1px solid #06b6d4;
-            border-radius: 1rem;
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start;
-            justify-content: flex-start;
-            box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.5);
-            -webkit-overflow-scrolling: touch;
-        }
-
-        #response-bubble {
-            font-size: 0.85rem;
-            font-weight: 600;
-            color: #ffffff;
-            line-height: 1.6;
-            width: 100%;
-            text-align: left;
-            white-space: pre-wrap;
-        }
-
-        /* BARRA DE ENTRADA / CONSOLE DE COMANDO */
-        .input-container {
-            width: 100%;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding-top: 0.5rem;
-            border-top: 1px solid #06b6d4;
-            flex-shrink: 0;
-        }
-
-        #query-input {
-            flex-grow: 1;
-            background-color: #000000;
-            border: 1px solid #ffffff;
-            border-radius: 0.75rem;
-            padding: 0.875rem;
-            font-size: 0.75rem;
-            color: #ffffff;
-            outline: none;
-            transition: all 0.2s;
-        }
-
-        #query-input:focus {
-            border-color: #06b6d4;
-            box-shadow: 0 0 10px rgba(6, 182, 214, 0.1);
-        }
-
-        .btn-mic {
-            background-color: #000000;
-            border: 1px solid #ffffff;
-            color: #ffffff;
-            border-radius: 0.75rem;
-            padding: 0.875rem;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s;
-            width: 44px;
-            height: 44px;
-            font-size: 1.1rem;
-        }
-
-        .btn-mic.recording {
-            background-color: #ff0000;
-            color: #000000;
-            border-color: #ff0000;
-            box-shadow: 0 0 10px #ff0000;
-        }
-
-        .btn-send {
-            padding-left: 1.25rem;
-            padding-right: 1.25rem;
-            padding-top: 0.875rem;
-            padding-bottom: 0.875rem;
-            background-color: #ffffff;
-            color: #000000;
-            border: none;
-            border-radius: 0.75rem;
-            font-weight: bold;
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            cursor: pointer;
-            transition: background-color 0.2s;
-            height: 44px;
-        }
-
-        /* PAINEL INDUSTRIAL ESCONDIDO (ESTOQUE, CADASTRO, FATURAMENTO) */
-        #industrial-panel {
-            display: none;
-            flex-direction: column;
-            gap: 1rem;
-            width: 100%;
-            background-color: #020617;
-            padding: 1.25rem;
-            border-radius: 1rem;
-            border: 1px solid #06b6d4;
-            overflow-y: auto;
-            max-height: 85vh;
-            color: #ffffff;
-            position: absolute;
-            top: 0;
-            left: 0;
-            height: 100%;
-            z-index: 100;
-        }
-
-        .panel-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid #06b6d4;
-            padding-bottom: 0.5rem;
-        }
-
-        .panel-title {
-            font-size: 0.75rem;
-            font-weight: bold;
-            color: #fde047;
-            text-transform: uppercase;
-        }
-
-        .btn-close {
-            background: transparent;
-            border: none;
-            color: #ffffff;
-            font-weight: bold;
-            font-size: 0.75rem;
-            cursor: pointer;
-        }
-
-        /* FORMULÁRIO DE CADASTRO */
-        .pdv-form {
-            display: grid;
-            grid-template-columns: 2fr 1fr 1fr auto;
-            gap: 0.5rem;
-            margin-bottom: 0.5rem;
-        }
-
-        @media (max-width: 480px) {
-            .pdv-form {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        .pdv-input {
-            background-color: #000000;
-            border: 1px solid #ffffff;
-            color: #ffffff;
-            border-radius: 0.25rem;
-            padding: 0.5rem;
-            font-size: 0.75rem;
-            outline: none;
-        }
-
-        .btn-add-product {
-            background-color: #06b6d4;
-            color: #000000;
-            border: none;
-            font-weight: bold;
-            padding: 0.5rem;
-            border-radius: 0.25rem;
-            text-transform: uppercase;
-            cursor: pointer;
-            font-size: 0.75rem;
-        }
-
-        /* TABELA DE ESTOQUE */
-        .table-container {
-            border: 1px solid #334155;
-            border-radius: 0.5rem;
-            background-color: #000000;
-            max-height: 200px;
-            overflow-y: auto;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.75rem;
-            text-align: left;
-        }
-
-        th, td {
-            padding: 0.5rem;
-            border-bottom: 1px solid #1e293b;
-        }
-
-        th {
-            background-color: #020617;
-            color: #06b6d4;
-            position: sticky;
-            top: 0;
-        }
-
-        .delete-row-btn {
-            background: transparent;
-            border: none;
-            color: #ff0000;
-            cursor: pointer;
-            font-weight: bold;
-        }
-
-        /* METRICAS DE FATURAMENTO */
-        .metrics-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 0.5rem;
-            margin-top: 0.5rem;
-        }
-
-        .metric-card {
-            background-color: #000000;
-            border: 1px solid #334155;
-            border-radius: 0.5rem;
-            padding: 0.5rem;
-            text-align: center;
-        }
-
-        .metric-val {
-            font-size: 0.85rem;
-            font-weight: bold;
-            color: #fde047;
-        }
-
-        .metric-lbl {
-            font-size: 7px;
-            color: #06b6d4;
-            text-transform: uppercase;
-        }
-
-        /* BACKUP TOOLS */
-        .tools-container {
-            display: flex;
-            gap: 0.5rem;
-            border-top: 1px solid #06b6d4;
-            padding-top: 0.75rem;
-            margin-top: 0.5rem;
-        }
-
-        .btn-tool {
-            flex: 1;
-            background-color: #000000;
-            color: #ffffff;
-            border: 1px solid #ffffff;
-            padding: 0.5rem;
-            border-radius: 0.25rem;
-            font-size: 10px;
-            font-weight: bold;
-            text-transform: uppercase;
-            cursor: pointer;
-            text-align: center;
-        }
-
-        .btn-tool-red {
-            background-color: #ff0000;
-            color: #000000;
-            border: 1px solid #ff0000;
-            padding: 0.5rem;
-            border-radius: 0.25rem;
-            font-size: 10px;
-            font-weight: bold;
-            text-transform: uppercase;
-            cursor: pointer;
-        }
-
-        /* ==================== MÁQUINA SMART POS V46 OVERLAY ==================== */
-        #pos-layer {
-            display: none;
-            position: absolute;
-            inset: 0;
-            background: #000000;
-            z-index: 200;
-            justify-content: center;
-            align-items: center;
-            width: 100%;
-            height: 100%;
-        }
-
-        :root {
-            --ouro: #D4AF37;
-            --carcaca: #ffcc00;
-            --tela-fundo: #FFFFFF;
-            --verde: #00a859;
-            --vermelho: #e81c24;
-            --preto-pos: #0a0a0a;
-            --azul: #00f2ff;
-        }
-
-        .smart-pos {
-            background: var(--carcaca);
-            width: 100%;
-            max-width: 450px;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            padding: 12px;
-            box-shadow: inset 0 0 20px rgba(0,0,0,0.3);
-            position: relative;
-        }
-
+        
         .moldura-visor {
-            background: var(--tela-fundo);
-            flex: 4;
-            border-radius: 25px;
-            margin-bottom: 12px;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.4);
-            border: 4px solid var(--ouro);
-            position: relative;
+            background: var(--tela-fundo); flex: 4; border-radius: 20px; margin-bottom: 8px;
+            display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+            border: 4px solid var(--ouro); position: relative;
         }
-
-        .visor-interno {
-            background: #FFF;
-            flex: 1;
-            position: relative;
-            display: flex;
-            flex-direction: column;
+        
+        .visor-interno { background: #FFF; flex: 1; position: relative; display: flex; flex-direction: column; overflow: hidden; }
+        .camada { position: absolute; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; background: #FFF; padding: 8px; text-align: center; }
+        
+        #v-grande { font-size: 4.2rem; color: #000; font-weight: 900; }
+        .logo-dony { width: 42px; height: 42px; border-radius: 50%; border: 2px solid var(--carcaca); }
+        
+        .box-barcode { background: #f0f0f0; padding: 5px; border-radius: 6px; width: 100%; max-height: 75px; overflow-y: auto; margin-top: 4px; border: 1px solid #ddd; }
+        .code-text { font-size: 0.5rem; word-break: break-all; font-family: monospace; font-weight: bold; color: #333; line-height: 1.1; }
+        
+        .helena-bar {
+            background: #020617; color: var(--azul); font-size: 9px; text-align: center; padding: 5px; font-weight: bold;
+            border-bottom: 1px solid var(--ouro); letter-spacing: 1px; display: flex; align-items: center; justify-content: center; gap: 5px;
         }
-
-        .camada {
-            position: absolute;
-            inset: 0;
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            background: #FFF;
-            padding: 20px;
-            text-align: center;
-            color: #000;
+        .painel-teclado { background: var(--preto-pos); padding: 10px; border-radius: 20px; flex: 1.8; display: flex; flex-direction: column; border: 2px solid var(--ouro); }
+        .grid-teclas { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; flex: 1; }
+        
+        .tecla { 
+            background: #2a2a2a; border: 1px solid #444; border-radius: 8px; color: var(--ouro);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            box-shadow: 0 3px #000; cursor: pointer;
         }
-
-        #v-grande {
-            font-size: 3.5rem;
-            color: #000;
-            font-weight: 900;
-        }
-
-        .logo-dony {
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            border: 2px solid var(--carcaca);
-        }
-
-        .box-barcode {
-            background: #f0f0f0;
-            padding: 8px;
-            border-radius: 8px;
-            width: 100%;
-            margin-top: 8px;
-            border: 1px solid #ddd;
-        }
-
-        .code-text {
-            font-size: 0.55rem;
-            word-break: break-all;
-            font-family: monospace;
-            font-weight: bold;
-            color: #333;
-        }
-
-        .painel-teclado {
-            background: var(--preto-pos);
-            padding: 10px;
-            border-radius: 20px;
-            flex: 2.2;
-            display: flex;
-            flex-direction: column;
-            border: 2px solid var(--ouro);
-        }
-
-        .grid-teclas {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 6px;
-            flex: 1;
-        }
-
-        .tecla {
-            background: #2a2a2a;
-            border: 1px solid #444;
-            border-radius: 10px;
-            color: var(--ouro);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 3px #000;
-            cursor: pointer;
-        }
-
-        .tecla:active {
-            transform: translateY(2px);
-            box-shadow: 0 1px #000;
-        }
-
-        .n {
-            font-size: 1.4rem;
-            font-weight: 900;
-        }
-
-        .abc {
-            font-size: 0.5rem;
-            color: #888;
-            font-weight: bold;
-            margin-top: -3px;
-        }
-
-        .btn-acao {
-            border: none;
-            font-weight: 900;
-            font-size: 0.7rem;
-            border-radius: 10px;
-            color: #fff;
-            cursor: pointer;
-        }
-
+        .tecla:active { transform: translateY(2px); box-shadow: 0 1px #000; }
+        .n { font-size: 1.4rem; font-weight: 900; }
+        .abc { font-size: 0.5rem; color: #888; font-weight: bold; margin-top: -4px; }
+        
+        .btn-acao { border: none; font-weight: 900; font-size: 0.7rem; border-radius: 8px; color: #fff; }
         .cancel { background: var(--vermelho); }
         .clear { background: #f9d80c; color: #000; }
         .confirm { background: var(--verde); }
-
-        .extras {
-            display: flex;
-            gap: 6px;
-            margin-top: 8px;
-            height: 38px;
-        }
-
-        .btn-e {
-            flex: 1;
-            border: none;
-            border-radius: 10px;
-            font-weight: 900;
-            font-size: 0.65rem;
-            cursor: pointer;
-        }
-
+        
+        .extras { display: flex; gap: 6px; margin-top: 8px; height: 38px; }
+        .btn-e { flex: 1; border: none; border-radius: 8px; font-weight: 900; font-size: 0.7rem; cursor: pointer; }
         .btn-zap { background: #25D366; color: #fff; }
         .btn-print { background: var(--ouro); color: #000; }
         .btn-bt { background: #0044cc; color: #fff; }
-
-        /* MODAL AUDITORIA POS */
-        #modal-auditoria {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: #000;
-            z-index: 1000;
-            flex-direction: column;
-            padding: 20px;
-            border: 5px solid var(--ouro);
-        }
-
-        .total-caixa {
-            color: #00ff00;
-            font-size: 1.8rem;
-            text-align: center;
-            border: 1px solid #00ff00;
-            margin: 15px 0;
-            padding: 10px;
-            font-weight: 900;
-        }
-
-        /* BOTÃO VOLTAR EXCLUSIVO DA MÁQUINA */
-        .btn-pos-voltar {
-            background: #000000;
-            border: 2px solid var(--ouro);
-            color: var(--ouro);
-            font-weight: 900;
-            font-size: 10px;
-            padding: 6px 12px;
-            border-radius: 8px;
-            cursor: pointer;
-            text-transform: uppercase;
-            margin-bottom: 6px;
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-        }
-
-        .btn-pos-voltar:hover {
-            background: var(--ouro);
-            color: #000000;
-        }
-
-        footer {
-            width: 100%;
-            max-width: 42rem;
-            margin-left: auto;
-            margin-right: auto;
-            text-align: center;
-            font-size: 8px;
-            color: #ffffff;
-            z-index: 10;
-            height: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-top: 1px solid #06b6d4;
-            padding-top: 0.5rem;
-            flex-shrink: 0;
-        }
+        
+        #modal-auditoria { display: none; position: fixed; inset: 0; background: #000; z-index: 1000; flex-direction: column; padding: 20px; border: 5px solid var(--ouro); }
+        .total-caixa { color: #00ff00; font-size: 1.8rem; text-align: center; border: 1px solid #00ff00; margin: 15px 0; padding: 10px; font-weight: 900; }
+        .install-container { position: fixed; bottom: 20px; right: 20px; z-index: 9999; display: none; }
+        #btnInstallPWA { background: linear-gradient(135deg, #d4af37, #aa8c2c); color: #000000; border: 2px solid #ffd700; padding: 15px 25px; font-size: 18px; font-weight: bold; border-radius: 12px; cursor: pointer; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
     </style>
+ 
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#bf953f">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="icon" sizes="192x192" href="icon-192.png">
+    <link rel="icon" sizes="512x512" href="icon-512.png">
+    <link rel="apple-touch-icon" href="icon-192.png">
 </head>
-<body>
-
-    <header>
-        <div class="status-container">
-            <div id="led-indicator" class="status-led"></div>
-            <span class="status-text">HELENA PDV v10.0 // DBJS CORE</span>
-        </div>
-        <div class="header-actions">
-            <button class="btn-pos-toggle" onclick="abrirPOS()">⚡ Receber (POS)</button>
-            <button class="btn-panel-toggle" onclick="togglePainelIndustrial()">📦 Painel & Estoque</button>
-            <span class="creator-tag">SR. JOSÉ DIVINO PRADO DA LAPA</span>
-        </div>
-    </header>
-
-    <main>
-        <div id="interaction-deck">
-                                      
-            <!-- CONSOLE DE RESPOSTA DA HELENA -->
-            <div class="response-container">
-                <div id="response-bubble">Sistemas administrados pelo DBJS e alimentados pelo JSLN, Mestre José. HELENA PDV v10.0 Ativa.  Como usar o PDV por voz ou texto: - Fale ou digite: "nova venda [produto] [método]" - Comando Direto POS: "cobrar [valor]" (Ex: "cobrar 35 reais")  Para Calculadora: Fale ou digite: "quanto é [operação]" (Ex: "quanto é 35 mais 45" ou "120 vezes 3"). O motor DBJS gerencia o estado operacional gravando automaticamente sobre a estrutura do JSLN e sincronizando com o Service Worker em segundo plano.</div>
-            </div>
-
-            <!-- CONSOLE DE COMANDO -->
-            <div class="input-container">
-                <button id="mic-btn" onclick="toggleMicrofone()" class="btn-mic" title="Falar com a HELENA">🎙️</button>
-                <input type="text" id="query-input" placeholder="Helena, nova venda carne na chapa pix..." onkeydown="if(event.key === 'Enter') processarComandoPDV()">
-                <button onclick="processarComandoPDV()" class="btn-send">Enviar</button>
-            </div>
-        </div>
-
-        <!-- PAINEL INDUSTRIAL ESCONDIDO (CADASTRO & QUANTIDADES) -->
-        <div id="industrial-panel">
-            <div class="panel-header">
-                <span class="panel-title">// CONFIGURAÇÃO DBJS & ESTOQUE</span>
-                <button onclick="togglePainelIndustrial()" class="btn-close">FECHAR ✕</button>
-            </div>
-
-            <!-- Cadastro Rápido de Produtos -->
-            <div class="pdv-form">
-                <input type="text" id="prod-name" placeholder="Nome do Produto" class="pdv-input">
-                <input type="number" id="prod-qty" placeholder="Qtd" class="pdv-input">
-                <input type="number" step="0.01" id="prod-price" placeholder="R$ Valor" class="pdv-input">
-                <button onclick="cadastrarProdutoUI()" class="btn-add-product">Cadastrar</button>
-            </div>
-
-            <!-- Tabela de Quantidades e Vendas -->
-            <div class="table-container">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Produto</th>
-                            <th>Qtd</th>
-                            <th>Valor</th>
-                            <th>Vendas</th>
-                            <th>Ação</th>
-                        </tr>
-                    </thead>
-                    <tbody id="inventory-table-body">
-                        <!-- Injetado via JS -->
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- Métricas de Faturamento -->
-            <div class="metrics-grid">
-                <div class="metric-card">
-                    <div class="metric-lbl">Total Faturado</div>
-                    <div id="fat-total" class="metric-val">R$ 0,00</div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-lbl">Faturamento PIX</div>
-                    <div id="fat-pix" class="metric-val">R$ 0,00</div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-lbl">Faturamento Caixa</div>
-                    <div id="fat-caixa" class="metric-val">R$ 0,00</div>
-                </div>
-            </div>
-
-            <!-- Ferramentas de Backup JSON -->
-            <div class="tools-container">
-                <button onclick="baixarCerebroJSON()" class="btn-tool">📥 Baixar JSON (cerebro.json)</button>
-                <label class="btn-tool" style="display:flex; align-items:center; justify-content:center; cursor:pointer;">
-                    📤 Injetar JSON
-                    <input type="file" id="inject-file" style="display: none;" onchange="injetarCerebroJSON(this)">
-                </label>
-                <button onclick="limparTudoPDV()" class="btn-tool-red">Limpar Banco</button>
-            </div>
-        </div>
-    </main>
-
-    <!-- ==================== CAMADA SMART POS V46 GIGANTE ==================== -->
-    <div id="pos-layer">
-        <div class="smart-pos">
-                                      
-            <!-- Cabeçalho Superior da Máquina com Voltar -->
-            <div style="display: flex; justify-content: space-between; align-items: center; width:100%;">
-                <button class="btn-pos-voltar" onclick="fecharPOS()">⬅ Voltar</button>
-                <span style="color: #000; font-weight: 900; font-size: 11px;">JDP V46 SUPREMA</span>
-            </div>
-
-            <div class="moldura-visor">
-                <div class="visor-interno">
-                    <!-- Tela de Logo Inicial -->
-                    <div id="tela-logo" class="camada" style="display:flex;">
-                        <img src="https://raw.githubusercontent.com/pradodalapa-hue/fotos-industrial/main/img/jdp_1776919033775_Engenheiro_Transparente__1_.png" style="width: 140px;">
-                        <p style="margin-top:10px; color:var(--ouro); font-weight:900; letter-spacing:2px; font-size:11px;">JDP INDUSTRIAL V46</p>
-                    </div>
-
-                    <!-- Tela de Digitação de Valor -->
-                    <div id="tela-digito" class="camada">
-                        <p style="font-size: 0.7rem; color: #999; font-weight:900;">VALOR DA VENDA</p>
-                        <div id="v-grande">R$ 0,00</div>
-                    </div>
-
-                    <!-- Tela de Geração do Pix EMV (FICA EM LOOP INFINITO ATÉ VOLTAR) -->
-                    <div id="area-pix" class="camada">
-                        <div style="border-bottom: 2px dashed #ccc; width: 100%; padding-bottom: 5px; margin-bottom: 5px;">
-                            <img src="https://raw.githubusercontent.com/pradodalapa-hue/fotos-industrial/main/img/jdp_1778108566673_1000928495.png" class="logo-dony">
-                            <p style="font-weight:900; font-size:0.75rem;">DONY BURGER'S</p>
-                        </div>
-                        <div id="qr-code" style="display: flex; justify-content: center; align-items: center;"></div>
-                        <p id="pix-valor-txt" style="font-size: 1.6rem; font-weight: 900; margin-top: 5px;">R$ 0,00</p>
-                        <div class="box-barcode">
-                            <p style="font-size:0.45rem; color:#999; font-weight:900;">PIX COPIA E COLA</p>
-                            <p id="payload-txt" class="code-text">Gerando...</p>
-                        </div>
-                    </div>
-
-                    <!-- Tela de Sucesso de Pagamento -->
-                    <div id="tela-sucesso" class="camada">
-                        <div style="font-size: 5rem; color: var(--verde);">✓</div>
-                        <p style="font-weight: 900; font-size: 1.8rem; color: var(--verde);">PAGO!</p>
-                        <div id="confirmacao-valor" style="font-size: 1.5rem; font-weight: 900; color: var(--ouro); background: #f0f0f0; padding: 8px 30px; border-radius: 50px; margin-top: 8px;"></div>
-                    </div>
-                </div>
-
-                <!-- BOTÃO SECRETO POSICIONADO NO FINAL DO VISOR COM Z-INDEX SUPREMO -->
-                <div id="btn-secreto" onclick="abrirAuditoria()" style="position:absolute; top:0; left:0; width:80px; height:80px; z-index:99999 !important; cursor:pointer; background: transparent;"></div>
-            </div>
-
-            <!-- Teclado Físico POS -->
-            <div class="painel-teclado">
-                <div class="grid-teclas">
-                    <button class="tecla" onclick="input('1')"><span class="n">1</span><span class="abc">QZ</span></button>
-                    <button class="tecla" onclick="input('2')"><span class="n">2</span><span class="abc">ABC</span></button>
-                    <button class="tecla" onclick="input('3')"><span class="n">3</span><span class="abc">DEF</span></button>
-                    <button class="btn-acao cancel" onclick="resetPOS()">X</button>
-
-                    <button class="tecla" onclick="input('4')"><span class="n">4</span><span class="abc">GHI</span></button>
-                    <button class="tecla" onclick="input('5')"><span class="n">5</span><span class="abc">JKL</span></button>
-                    <button class="tecla" onclick="input('6')"><span class="n">6</span><span class="abc">MNO</span></button>
-                    <button class="btn-acao clear" onclick="apagarPOS()">CORR</button>
-
-                    <button class="tecla" onclick="input('7')"><span class="n">7</span><span class="abc">PRS</span></button>
-                    <button class="tecla" onclick="input('8')"><span class="n">8</span><span class="abc">TUV</span></button>
-                    <button class="tecla" onclick="input('9')"><span class="n">9</span><span class="abc">WXY</span></button>
-                    <button class="btn-acao confirm" onclick="gerarPagamentoPOS()">ENTRA</button>
-
-                    <button class="tecla"><span class="n">*</span></button>
-                    <button class="tecla" onclick="input('0')"><span class="n">0</span></button>
-                    <button class="tecla"><span class="n">#</span></button>
-                    <button class="tecla" onclick="input('00')"><span class="n">.00</span></button>
-                </div>
-                <div class="extras">
-                    <button class="btn-e btn-bt" onclick="conectarBT()">BT</button>
-                    <button class="btn-e btn-zap" onclick="compartilharPix()">ZAP</button>
-                    <button class="btn-e btn-print" onclick="imprimirTicket()">PRINT</button>
-                </div>
-            </div>
-        </div>
+<body onclick="entrarFullScreen()">
+    <div class="install-container" id="installContainer">
+        <button id="btnInstallPWA" onclick="instalarApp()">INSTALAR SISTEMA</button>
     </div>
-
-    <!-- Modal de Auditoria POS -->
+    
     <div id="modal-auditoria">
         <div style="display:flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--ouro); padding-bottom: 10px;">
             <h2 style="color:var(--ouro)">JDP AUDITORIA</h2>
-            <button onclick="fecharAuditoria()" style="background:var(--ouro); padding:8px; font-weight:900; border:none; cursor:pointer;">X</button>
+            <button onclick="fecharAuditoria()" style="background:var(--ouro); padding:8px; font-weight:900;">X</button>
         </div>
         <div class="total-caixa" id="soma-total">TOTAL: R$ 0,00</div>
         <div id="lista-pix" style="flex:1; overflow-y:auto; color:#fff; font-family:monospace; font-size:0.8rem;"></div>
-        <button onclick="limparCaderno()" style="background:red; color:#fff; padding:15px; border:none; font-weight:900; margin-top:10px; cursor:pointer;">LIMPAR TUDO</button>
+        <button onclick="limparCaderno()" style="background:red; color:#fff; padding:15px; border:none; font-weight:900; margin-top:10px;">LIMPAR TUDO</button>
     </div>
 
-    <footer>
-        <span>HELENA SECURE SYSTEM // KERNEL v10.0 // DBJS & JSLN</span>
-        <span>SENHA ATIVA: PRINCESA DIAMANTE</span>
-    </footer>
-
-    <!-- ==================== MOTOR DBJS INJETADO NO KERNEL (100% OFF-CORS) ==================== -->
-    <script>
-        // FUNÇÃO DE NORMALIZAÇÃO GLOBAL PARA COMBATER QUALQUER ERRO DE MAIÚSCULA/MINÚSCULA/ACENTO/ESPAÇOS
-        function normalizarTexto(txt) {
-            if (!txt) return "";
-            return txt.toString().toLowerCase()
-                .normalize("NFD")
-                .replace(/[\u0300-\u036f]/g, "") // Remove acentos completamente
-                .replace(/[^a-z0-9\s]/g, "")     // Remove qualquer pontuação, hífen, ponto final ou vírgula invisível
-                .replace(/\s+/g, " ")            // Transforma múltiplos espaços em apenas um
-                .trim();
-        }
-
-        // NOVO MOTOR TRADUTOR ARITMÉTICO PARA ÁUDIO E TEXTO
-        function normalizarMatematica(txt) {
-            if (!txt) return "";
-            let t = txt.toLowerCase()
-                .normalize("NFD")
-                .replace(/[\u0300-\u036f]/g, ""); // Remove acentos
-
-            // Tradução de termos falados em operadores lógicos reais
-            t = t.replace(/\bmais\b/g, "+");
-            t = t.replace(/\bmenos\b/g, "-");
-            t = t.replace(/\bvezes\b/g, "*");
-            t = t.replace(/\bdividido por\b/g, "/");
-            t = t.replace(/\bdividido\b/g, "/");
-            t = t.replace(/\bpor\b/g, "/");
-            t = t.replace(/\bx\b/g, "*"); // "2 x 2" -> "2 * 2"
-
-            // Limpeza de termos de ativação de voz da calculadora
-            t = t.replace(/quanto\s+e/g, "");
-            t = t.replace(/quanto\s+e\s+o\s+resultado\s+de/g, "");
-            t = t.replace(/calculadora/g, "");
-            t = t.replace(/calcule/g, "");
-            t = t.replace(/calcular/g, "");
-
-            // Converte vírgula decimal em ponto para o interpretador JS
-            t = t.replace(/(\d+),(\d+)/g, "$1.$2");
-
-            // Filtro de segurança: remove tudo que não for caractere matemático
-            t = t.replace(/[^0-9+\-*/().\s]/g, "");
-            t = t.replace(/\s+/g, "").trim(); // Remove espaços internos
-            return t;
-        }
-
-        const DBJS = (() => {
-            const STORAGE_KEY = 'helena_cerebro_json';
-            let JSLN_DATABASE = { produtos: [], transacoes: [] };
-
-            const dadosPadrao = {
-                produtos: [
-                    { nome: "CARNE NA CHAPA", quantidade: 100, valor: 35.00, vendas: 0 },
-                    { nome: "HAMBURGUER", quantidade: 100, valor: 25.00, vendas: 0 }
-                ],
-                transacoes: []
-            };
-
-            function sincronizarComServiceWorker() {
-                if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-                    navigator.serviceWorker.controller.postMessage({
-                        type: 'SYNC_DATABASE',
-                        data: JSLN_DATABASE
-                    });
-                }
-            }
-
-            return {
-                async init() {
-                    const stored = localStorage.getItem(STORAGE_KEY);
-                    if (stored) {
-                        try {
-                            JSLN_DATABASE = JSON.parse(stored);
-                            if (!JSLN_DATABASE.produtos) JSLN_DATABASE.produtos = [];
-                            if (!JSLN_DATABASE.transacoes) JSLN_DATABASE.transacoes = [];
-                        } catch (e) {
-                            JSLN_DATABASE = JSON.parse(JSON.stringify(dadosPadrao));
-                        }
-                    } else {
-                        JSLN_DATABASE = JSON.parse(JSON.stringify(dadosPadrao));
-                        this.salvar();
-                    }
-                    return JSLN_DATABASE;
-                },
-                salvar() {
-                    localStorage.setItem(STORAGE_KEY, JSON.stringify(JSLN_DATABASE, null, 2));
-                    sincronizarComServiceWorker();
-                },
-                getData() { return JSLN_DATABASE; },
-                cadastrarOuAtualizarProduto(nome, quantidade, valor) {
-                    const nomeFormatado = nome.toUpperCase().trim();
-                    const existente = JSLN_DATABASE.produtos.find(p => normalizarTexto(p.nome) === normalizarTexto(nomeFormatado));
-                    if (existing) {
-                        existente.quantidade += quantidade;
-                        existente.valor = valor;
-                        this.salvar();
-                        return { status: 'atualizado', mensagem: `Estoque de ${nomeFormatado} atualizado para ${existente.quantidade} unidades.` };
-                    } else {
-                        JSLN_DATABASE.produtos.push({ nome: nomeFormatado, quantidade, valor, vendas: 0 });
-                        this.salvar();
-                        return { status: 'criado', mensagem: `${nomeFormatado} integrado ao estoque.` };
-                    }
-                },
-                removerProduto(index) {
-                    JSLN_DATABASE.produtos.splice(index, 1);
-                    this.salvar();
-                },
-                processarVenda(prodBuscado, metodo) {
-                    const termoNorm = normalizarTexto(prodBuscado);
-                    
-                    // Busca inteligente com normalização dupla (ignora maiúsculas, minúsculas, acentos e pontuações)
-                    const produto = JSLN_DATABASE.produtos.find(p => {
-                        const nomeNorm = normalizarTexto(p.nome);
-                        return nomeNorm === termoNorm || nomeNorm.includes(termoNorm) || termoNorm.includes(nomeNorm);
-                    });
-
-                    if (!produto) return { sucesso: false, tipo: 'NAO_ENCONTRADO' };
-                    if (produto.quantidade < 1) return { sucesso: false, tipo: 'ESGOTADO', produto: produto.nome };
-
-                    produto.quantidade -= 1;
-                    produto.vendas += 1;
-
-                    const agora = new Date();
-                    const dataStr = agora.toLocaleDateString('pt-BR');
-                    const horaStr = agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-
-                    const transacao = {
-                        produto: produto.nome,
-                        quantidade: 1,
-                        valorTotal: produto.valor,
-                        metodoPagamento: metodo.toUpperCase(),
-                        data: dataStr,
-                        hora: horaStr
-                    };
-                    JSLN_DATABASE.transacoes.push(transacao);
-                    this.salvar();
-                    return { sucesso: true, transacao, produto };
-                },
-                registrarVendaPOS(valor) {
-                    const agora = new Date();
-                    const dataStr = agora.toLocaleDateString('pt-BR');
-                    const horaStr = agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-
-                    const transacao = {
-                        produto: "VENDA AVULSA MÁQUINA POS",
-                        quantidade: 1,
-                        valorTotal: parseFloat(valor),
-                        metodoPagamento: "PIX",
-                        data: dataStr,
-                        hora: horaStr
-                    };
-                    JSLN_DATABASE.transacoes.push(transacao);
-                    this.salvar();
-                },
-                calcularFaturamento() {
-                    let total = 0, totalPix = 0, totalCaixa = 0;
-                    JSLN_DATABASE.transacoes.forEach(t => {
-                        total += t.valorTotal;
-                        if (t.metodoPagamento === "PIX") totalPix += t.valorTotal;
-                        else totalCaixa += t.valorTotal;
-                    });
-                    return { total, totalPix, totalCaixa };
-                },
-                exportarJSON() {
-                    const fileData = JSON.stringify(JSLN_DATABASE, null, 2);
-                    const blob = new Blob([fileData], { type: "application/json" });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = "cerebro.json";
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    URL.revokeObjectURL(url);
-                },
-                importarJSON(jsonString) {
-                    try {
-                        const parsed = JSON.parse(jsonString);
-                        if (parsed.produtos && parsed.transacoes) {
-                            JSLN_DATABASE = parsed;
-                            this.salvar();
-                            return true;
-                        }
-                        return false;
-                    } catch (e) { return false; }
-                },
-                limparBanco() {
-                    JSLN_DATABASE = { produtos: [], transacoes: [] };
-                    this.salvar();
-                }
-            };
-        })();
-    </script>
-
-    <!-- ==================== SCRIPTS DA INTERFACE & INTERAÇÃO ==================== -->
-    <script>
-        // DECLARAÇÃO GLOBAL EXPLICITA DE VARIÁVEIS DE ÁUDIO (PROTEÇÃO DE MEMÓRIA)
-        let recognition = null;
-        let isRecording = false;
-        let isSpeaking = false;
-        const synth = window.speechSynthesis; // Inicialização do motor de síntese de voz
-
-        // Registro do Service Worker e Inicialização
-        window.addEventListener('load', async () => {
-            inicializarAjusteViewport();
-            if ('serviceWorker' in navigator) {
-                try {
-                    await navigator.serviceWorker.register('./sw.js');
-                    console.log('Service Worker Registrado.');
-                } catch (e) {
-                    console.warn('Falha no SW:', e);
-                }
-            }
-            await DBJS.init();
-            atualizarTelas();
-            inicializarSpeechRecognition();
-        });
-
-        function inicializarAjusteViewport() {
-            if (window.visualViewport) {
-                const ajustarLayout = () => {
-                    document.body.style.height = `${window.visualViewport.height}px`;
-                    window.scrollTo(0, 0);
-                };
-                window.visualViewport.addEventListener('resize', ajustarLayout);
-                window.visualViewport.addEventListener('scroll', ajustarLayout);
-                ajustarLayout();
-            }
-        }
-
-        // CONTROLADORES DE TELAS
-        function togglePainelIndustrial() {
-            const panel = document.getElementById('industrial-panel');
-            const interactionDeck = document.getElementById('interaction-deck');
-            if (panel.style.display === 'none' || panel.style.display === '') {
-                panel.style.display = 'flex';
-                interactionDeck.style.display = 'none';
-                triggerSpeech("Painel de estoque ativado.");
-            } else {
-                panel.style.display = 'none';
-                interactionDeck.style.display = 'flex';
-                triggerSpeech("Painel principal.");
-            }
-        }
-
-        function abrirPOS() {
-            document.getElementById('pos-layer').style.display = 'flex';
-            resetPOS();
-            triggerSpeech("Terminal de pagamento ativado.");
-        }
-
-        function fecharPOS() {
-            document.getElementById('pos-layer').style.display = 'none';
-            triggerSpeech("Retornando ao painel principal.");
-            atualizarTelas();
-        }
-
-        function atualizarTelas() {
-            renderEstoque();
-            renderFaturamento();
-        }
-
-        function renderEstoque() {
-            const tbody = document.getElementById('inventory-table-body');
-            tbody.innerHTML = "";
-            const db = DBJS.getData();
-
-            db.produtos.forEach((prod, index) => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td style="font-weight:bold; color:#ffffff;">${prod.nome}</td>
-                    <td style="color:#06b6d4;">${prod.quantidade}</td>
-                    <td>R$ ${prod.valor.toFixed(2)}</td>
-                    <td style="color:#fde047; font-weight:bold;">${prod.vendas}</td>
-                    <td><button onclick="removerProdutoEstoque(${index})" class="delete-row-btn">✕</button></td>
-                `;
-                tbody.appendChild(tr);
-            });
-        }
-
-        function renderFaturamento() {
-            const metrics = DBJS.calcularFaturamento();
-            document.getElementById('fat-total').innerText = `R$ ${metrics.total.toFixed(2)}`;
-            document.getElementById('fat-pix').innerText = `R$ ${metrics.totalPix.toFixed(2)}`;
-            document.getElementById('fat-caixa').innerText = `R$ ${metrics.totalCaixa.toFixed(2)}`;
-        }
-
-        function cadastrarProdutoUI() {
-            const nomeInput = document.getElementById('prod-name');
-            const qtyInput = document.getElementById('prod-qty');
-            const priceInput = document.getElementById('prod-price');
-
-            const nome = nomeInput.value.trim().toUpperCase();
-            const qty = parseInt(qtyInput.value);
-            const price = parseFloat(priceInput.value);
-
-            if (!nome || isNaN(qty) || isNaN(price)) {
-                triggerSpeech("Preencha todos os campos para cadastrar.");
-                return;
-            }
-
-            const resultado = DBJS.cadastrarOuAtualizarProduto(nome, qty, price);
-            triggerSpeech(resultado.mensagem);
-
-            nomeInput.value = "";
-            qtyInput.value = "";
-            priceInput.value = "";
-            atualizarTelas();
-        }
-
-        function removerProdutoEstoque(index) {
-            DBJS.removerProduto(index);
-            atualizarTelas();
-            triggerSpeech("Produto deletado.");
-        }
-
-        // PARSER DINÂMICO DE COMANDOS JDP (MÁXIMA TOLERÂNCIA A MAIÚSCULAS/MINÚSCULAS/CONECTORES)
-        function processarComandoDinamico(queryOriginal) {
-            const queryNorm = normalizarTexto(queryOriginal);
-
-            // 1. GATILHO POS: cobrar [valor] (Ex: "cobra 35 reais", "COBRAR 35", "cobrar 35.50")
-            if (queryNorm.startsWith("cobrar") || queryNorm.startsWith("cobra")) {
-                let numMatch = queryOriginal.match(/\d+([.,]\d+)?/);
-                if (numMatch) {
-                    let valorFloat = parseFloat(numMatch[0].replace(',', '.'));
-                    if (!isNaN(valorFloat) && valorFloat > 0) {
-                        return { tipo: 'COBRAR', valor: valorFloat };
-                    }
-                }
-            }
-
-            // 2. GATILHO DE VENDA (Ex: "nova venda de carne na chapa no pix", "anota carne na chapa dinheiro", "carne na chapa pix")
-            let metodo = "";
-            const metodosSuportados = ["pix", "dinheiro", "cartao", "credito", "debito"];
-            for (let m of metodosSuportados) {
-                if (queryNorm.includes(m)) {
-                    metodo = m;
-                    break;
-                }
-            }
-
-            if (metodo) {
-                let prodStr = queryNorm;
-                const prefixos = [
-                    "nova venda de", "novo venda de", "nova venda", "novo venda", "venda de", "venda", 
-                    "anota venda de", "anota venda", "anota de", "anota", 
-                    "anotar venda de", "anotar venda", "anotar",
-                    "registra venda de", "registra venda", "registra",
-                    "registrar venda de", "registrar venda", "registrar",
-                    "registre venda de", "registre venda", "registre"
-                ];
-
-                for (let pref of prefixos) {
-                    if (prodStr.startsWith(pref)) {
-                        prodStr = prodStr.substring(pref.length).trim();
-                        break;
-                    }
-                }
-
-                const sufixos = [
-                    " no " + metodo, " na " + metodo, " em " + metodo, " com " + metodo, " " + metodo,
-                    "no " + metodo, "na " + metodo, "em " + metodo, "com " + metodo
-                ];
-
-                for (let suf of sufixos) {
-                    if (prodStr.endsWith(suf)) {
-                        prodStr = prodStr.substring(0, prodStr.length - suf.length).trim();
-                        break;
-                    }
-                }
-
-                if (prodStr.startsWith("de ") || prodStr.startsWith("do ") || prodStr.startsWith("da ")) {
-                    prodStr = prodStr.substring(3).trim();
-                }
-
-                if (prodStr) {
-                    return { tipo: 'VENDA', produto: prodStr, metodo: metodo };
-                }
-            }
-
-            return null; // Comando não mapeado
-        }
-
-        // CHAT PROCESSADOR HELENA (INTEGRAÇÃO DA CALCULADORA JDP SOBERANA)
-        function processarComandoPDV() {
-            const queryInput = document.getElementById('query-input');
-            const queryOriginal = queryInput.value.trim();
-            if (!queryOriginal) return;
-
-            queryInput.value = "";
-            if (synth && synth.speaking) { synth.cancel(); }
-
-            const responseBubble = document.getElementById('response-bubble');
-            responseBubble.innerHTML = "...";
-
-            const queryLowerRaw = queryOriginal.toLowerCase();
-
-            // ==================== NOVO BLOCO: DETECTA E PROCESSA CALCULADORA SOBERANA ====================
-            const expressaoMatematica = normalizarMatematica(queryOriginal);
-            const temOperador = /[+\-*/]/.test(expressaoMatematica);
-            const temNumero = /[0-9]/.test(expressaoMatematica);
-            const eCalculadora = queryLowerRaw.includes("calculadora") || 
-                                 queryLowerRaw.includes("calcule") || 
-                                 queryLowerRaw.includes("calcular") || 
-                                 queryLowerRaw.includes("quanto e") || 
-                                 queryLowerRaw.includes("quanto ee") ||
-                                 queryLowerRaw.includes("quanto é") ||
-                                 queryLowerRaw.includes("mais") ||
-                                 queryLowerRaw.includes("menos") ||
-                                 queryLowerRaw.includes("vezes") ||
-                                 queryLowerRaw.includes("dividido");
-
-            if (eCalculadora || (temOperador && temNumero)) {
-                try {
-                    // Executa o cálculo localmente com isolamento de escopo
-                    const calculo = Function(`"use strict"; return (${expressaoMatematica})`)();
-                    if (calculo !== undefined && !isNaN(calculo)) {
-                        const respostaTxt = `[MOTOR ARITMÉTICO NATIVO JDP]\n\nExpressão resolvida localmente:\n\n💻 Entrada: "${queryOriginal}"\n⚙️ Processado: ${expressaoMatematica}\n📊 Resultado: ${calculo}`;
-                        triggerSpeech(`O resultado é ${calculo}`);
-                        renderInstantText(respostaTxt, 'response-bubble');
-                        return;
-                    }
-                } catch (e) {
-                    if (eCalculadora) {
-                        const respostaTxt = `[SISTEMA ARITMÉTICO JDP]\n\nErro ao processar cálculo matemático.\n\n💻 Entrada: "${queryOriginal}"\n⚙️ Tentativa: ${expressaoMatematica}`;
-                        triggerSpeech("Erro no processamento do cálculo.");
-                        renderInstantText(respostaTxt, 'response-bubble');
-                        return;
-                    }
-                }
-            }
-            // ============================================================================================
-
-            // Executa o Parser Dinâmico de Vendas e Cobrança
-            const comando = processarComandoDinamico(queryOriginal);
-
-            if (comando) {
-                if (comando.tipo === 'COBRAR') {
-                    let cents = Math.round(comando.valor * 100).toString();
-                    abrirPOS();
-                    montante = cents;
-                    status = "DIG";
-                    atualizarVisorPOS();
-                    gerarPagamentoPOS(); // Auto gera o QR Code na tela
-                    triggerSpeech(`Cobrando R$ ${comando.valor.toFixed(2).replace('.', ',')} na máquina.`);
-                    return;
-                }
-
-                if (comando.tipo === 'VENDA') {
-                    let prodBuscado = comando.produto.toUpperCase();
-                    let metodo = comando.metodo.toUpperCase();
-
-                    if (metodo === "CREDITO" || metodo === "DEBITO") metodo = "CARTÃO";
-
-                    const resultado = DBJS.processarVenda(prodBuscado, metodo);
-                                    
-                    if (resultado.sucesso) {
-                        const t = resultado.transacao;
-                        const prod = resultado.produto;
-                        const respostaTxt = `[VENDA PROCESSADA]\n\n📦 Produto: ${prod.nome}\n📉 Estoque: ${prod.quantidade + 1} ➔ ${prod.quantidade}\n💵 Valor: R$ ${prod.valor.toFixed(2)}\n⚡ Pagamento: ${t.metodoPagamento}\n🕒 Data/Hora: ${t.data} - ${t.hora}`;
-                                                
-                        triggerSpeech(`Vendido um ${prod.nome} no ${t.metodoPagamento.toLowerCase()}. Estoque atualizado para ${prod.quantidade}.`);
-                        renderInstantText(respostaTxt, 'response-bubble');
-                    } else if (resultado.tipo === 'ESGOTADO') {
-                        const respostaTxt = `[ALERTA ESTOQUE]\n\nEstoque esgotado para o produto: ${resultado.produto}.`;
-                        triggerSpeech(`Atenção, Mestre. Estoque esgotado para ${resultado.produto}.`);
-                        renderInstantText(respostaTxt, 'response-bubble');
-                    } else {
-                        const respostaTxt = `[PRODUTO NÃO ENCONTRADO]\n\nO produto "${prodBuscado}" não está cadastrado no sistema.`;
-                        triggerSpeech(`Mestre, o produto ${prodBuscado} não foi localizado no estoque.`);
-                        renderInstantText(respostaTxt, 'response-bubble');
-                    }
-                    atualizarTelas();
-                    return;
-                }
-            }
-
-            // Fallback se nada funcionar
-            const respostaTxt = `[HELENA PDV]\n\nComando não compreendido.\n\nTente falar ou digitar:\n- "nova venda carne na chapa pix"\n- "quanto é 150 mais 250"\n- "cobrar 35"`;
-            triggerSpeech("Comando não compreendido.");
-            renderInstantText(respostaTxt, 'response-bubble');
-        }
-
-        function renderInstantText(text, elementId) {
-            const element = document.getElementById(elementId);
-            element.innerHTML = text;
-            const parentContainer = element.parentElement;
-            parentContainer.scrollTop = parentContainer.scrollHeight;
-        }
-
-        // MICROFONE E RECONHECIMENTO (BLINDADO CONTRA TRAVAMENTO E PERDA DE REFERÊNCIA)
-        function inicializarSpeechRecognition() {
-            if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-                recognition = new SpeechRecognition();
-                recognition.continuous = false;
-                recognition.interimResults = false;
-                recognition.lang = 'pt-BR';
-
-                recognition.onstart = () => {
-                    isRecording = true;
-                    document.getElementById('mic-btn').classList.add('recording');
-                    document.getElementById('led-indicator').className = 'status-led listening';
-                };
-
-                recognition.onresult = (event) => {
-                    const result = event.results[0][0].transcript;
-                    document.getElementById('query-input').value = result;
-                };
-
-                recognition.onerror = (e) => {
-                    console.error("Erro no subsistema de captura de áudio JDP:", e.error);
-                    if (e.error === 'not-allowed') {
-                        renderInstantText("[ALERTA SISTEMA]\n\nPermissão para o microfone foi negada pelo Android/Navegador. Por favor, conceda permissão de áudio para o aplicativo HELENA.", 'response-bubble');
-                    }
-                    pararGravacao();
-                };
-
-                recognition.onend = () => {
-                    pararGravacao();
-                    const inputVal = document.getElementById('query-input').value.trim();
-                    if (inputVal) {
-                        processarComandoPDV();
-                    }
-                };
-            } else {
-                console.warn("Reconhecimento de fala nativo não suportado neste dispositivo.");
-                document.getElementById('mic-btn').style.display = 'none';
-            }
-        }
-
-        function toggleMicrofone() {
-            if (!recognition) {
-                alert("Mestre, o reconhecimento de áudio não é suportado pelo navegador ou dispositivo atual.");
-                return;
-            }
+    <div class="smart-pos">
+        <div class="moldura-visor">
+            <div class="helena-bar" id="helena-status">
+                <span style="color: #fde047;">★ CENTRAL HELENA</span> | SISTEMA PRONTO
+            </div>
             
-            // Blindagem: Se a HELENA estiver falando, interrompe a fala antes de iniciar o microfone
-            if (synth && synth.speaking) {
-                synth.cancel();
-                isSpeaking = false;
-                document.getElementById('led-indicator').className = 'status-led';
-            }
-
-            if (isRecording) {
-                try {
-                    recognition.stop();
-                } catch(e) {
-                    console.warn("Falha ao interromper reconhecimento:", e);
-                }
-            } else {
-                try {
-                    recognition.start();
-                } catch(e) {
-                    console.warn("Reconhecimento já estava ativo ou reiniciando.");
-                }
-            }
-        }
-
-        function pararGravacao() {
-            isRecording = false;
-            document.getElementById('mic-btn').classList.remove('recording');
-            document.getElementById('led-indicator').className = 'status-led';
-        }
-
-        function baixarCerebroJSON() {
-            DBJS.exportarJSON();
-            triggerSpeech("Cérebro exportado.");
-        }
-
-        function injetarCerebroJSON(input) {
-            const file = input.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const sucesso = DBJS.importarJSON(e.target.result);
-                if (sucesso) {
-                    atualizarTelas();
-                    triggerSpeech("Dados importados com sucesso.");
-                } else {
-                    alert("Formato inválido.");
-                }
-            };
-            reader.readAsText(file);
-        }
-
-        function limparTudoPDV() {
-            if (confirm("Mestre, deseja limpar todo o banco de dados do PDV?")) {
-                DBJS.limparBanco();
-                atualizarTelas();
-                triggerSpeech("Banco de dados formatado.");
-            }
-        }
-
-        function triggerSpeech(texto) {
-            if (!synth) return;
+            <div id="btn-secreto" onclick="abrirAuditoria()" style="position:absolute; top:25px; left:0; width:50px; height:50px; z-index:100;"></div>
             
-            // Cancela gravação ativa para evitar loop de retorno acústico
-            if (isRecording && recognition) {
-                try {
-                    recognition.stop();
-                } catch(e) {}
-            }
+            <div class="visor-interno">
+                <div id="tela-logo" class="camada" style="display:flex;">
+                    <img src="https://raw.githubusercontent.com/pradodalapa-hue/fotos-industrial/main/img/jdp_1790117781506_Engenheiro_Transparente__5_.png" style="width: 140px;" crossorigin="anonymous">
+                    <p style="margin-top:15px; color:var(--ouro); font-weight:900; letter-spacing:2px; font-size: 0.9rem;">ESTACIONAMENTO DETRAN</p>
+                </div>
 
-            setTimeout(() => {
-                try {
-                    isSpeaking = true;
-                    document.getElementById('led-indicator').className = 'status-led speaking';
-                    synth.cancel(); 
+                <div id="tela-digito" class="camada">
+                    <p style="font-size: 0.75rem; color: #999; font-weight:900;">VALOR DA VENDA</p>
+                    <div id="v-grande">R$ 0,00</div>
+                </div>
 
-                    let textoLimpo = texto.replace(/<div[\s\S]*?<\/div>/g, "[Painel]");
-                    textoLimpo = textoLimpo.replace(/<[^>]*>/g, '').trim();
-                    
-                    if (textoLimpo.length > 200) {
-                        textoLimpo = textoLimpo.substring(0, 190) + "...";
-                    }
-                    
-                    const utterance = new SpeechSynthesisUtterance(textoLimpo);
-                    utterance.lang = 'pt-BR';
-                    utterance.pitch = 1.0;
-                    utterance.rate = 1.1;
+                <!-- CAMADA PIX COM QRCODE OTIMIZADO -->
+                <div id="area-pix" class="camada">
+                    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; border-bottom: 1px dashed #ccc; padding-bottom: 4px; margin-bottom: 4px;">
+                        <img src="https://raw.githubusercontent.com/pradodalapa-hue/fotos-industrial/main/img/jdp_1790117781506_Engenheiro_Transparente__5_.png" class="logo-dony" crossorigin="anonymous">
+                        <p style="font-weight:900; font-size:0.7rem; margin-top: 2px;">DONINA H L SOUZA</p>
+                    </div>
+                    <div id="qr-code" style="padding: 6px; background: white; border-radius: 6px; display: inline-block;"></div>
+                    <p id="pix-valor-txt" style="font-size: 1.3rem; font-weight: 900; margin-top: 2px;">R$ 0,00</p>
+                    <div class="box-barcode">
+                        <p style="font-size:0.45rem; color:#999; font-weight:900;">PIX COPIA E COLA</p>
+                        <p id="payload-txt" class="code-text">Gerando...</p>
+                    </div>
+                </div>
 
-                    utterance.onend = () => {
-                        isSpeaking = false;
-                        document.getElementById('led-indicator').className = 'status-led';
-                    };
-                    utterance.onerror = () => {
-                        isSpeaking = false;
-                        document.getElementById('led-indicator').className = 'status-led';
-                    };
-                    synth.speak(utterance);
-                } catch (e) {
-                    isSpeaking = false;
-                    document.getElementById('led-indicator').className = 'status-led';
-                    console.error("Erro na síntese de voz:", e);
-                }
-            }, 50);
-        }
+                <!-- TELA DE SUCESSO -->
+                <div id="tela-sucesso" class="camada" style="background: #000; padding: 0; overflow: hidden; position: absolute; inset: 0;">
+                    <video id="video-sucesso-pos" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1;" loop muted playsinline></video>
+                    <div style="position: absolute; inset: 0; z-index: 2; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(0,0,0,0.6); padding: 20px; width: 100%; height: 100%;">
+                        <div style="font-size: 4rem; color: var(--verde); line-height: 1;">✓</div>
+                        <p style="font-weight: 900; font-size: 1.8rem; color: var(--verde);">PAGO!</p>
+                        <div id="confirmacao-valor" style="font-size: 1.6rem; font-weight: 900; color: var(--ouro); background: rgba(15, 23, 42, 0.9); padding: 8px 30px; border-radius: 40px; margin-top: 8px; border: 2px solid var(--ouro);"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-        // ==================== LÓGICA DO TERMINAL POS V46 (SEM AUTO-PAGAMENTO) ====================
-        const CHAVE = "70945887205", EMISSOR = "JOSE DIVINO PRADO DA LAPA", CIDADE = "MANAUS";
+        <div class="painel-teclado">
+            <div class="grid-teclas">
+                <button class="tecla" onclick="input('1')"><span class="n">1</span><span class="abc">QZ</span></button>
+                <button class="tecla" onclick="input('2')"><span class="n">2</span><span class="abc">ABC</span></button>
+                <button class="tecla" onclick="input('3')"><span class="n">3</span><span class="abc">DEF</span></button>
+                <button class="btn-acao cancel" onclick="reset()">X</button>
+                
+                <button class="tecla" onclick="input('4')"><span class="n">4</span><span class="abc">GHI</span></button>
+                <button class="tecla" onclick="input('5')"><span class="n">5</span><span class="abc">JKL</span></button>
+                <button class="tecla" onclick="input('6')"><span class="n">6</span><span class="abc">MNO</span></button>
+                <button class="btn-acao clear" onclick="gatilhoBotaoAmarelo()">CORR</button>
+                
+                <button class="tecla" onclick="input('7')"><span class="n">7</span><span class="abc">PRS</span></button>
+                <button class="tecla" onclick="input('8')"><span class="n">8</span><span class="abc">TUV</span></button>
+                <button class="tecla" onclick="input('9')"><span class="n">9</span><span class="abc">WXY</span></button>
+                <button class="btn-acao confirm" onclick="gerarPagamento()">ENTRA</button>
+                
+                <button class="tecla"><span class="n">*</span></button>
+                <button class="tecla" onclick="input('0')"><span class="n">0</span></button>
+                <button class="tecla"><span class="n">#</span></button>
+                <!-- BOTÃO .00 CONFIGURADO PARA ATIVAR O LEITOR NFC -->
+                <button class="tecla" onclick="iniciarLeituraNFC()"><span class="n">.00</span><span class="abc">NFC</span></button>
+            </div>
+            <div class="extras">
+                <button class="btn-e btn-bt" onclick="conectarBT()">BT</button>
+                <button class="btn-e btn-zap" onclick="compartilharPix()">ZAP</button>
+                <button class="btn-e btn-print" onclick="imprimirTicket()">PRINT</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const VIDEO_COMEMORACAO = "https://raw.githubusercontent.com/pradodalapa-hue/fotos-industrial/main/media/jdp_1786372933817_gemini_generated_video_6e940877.mp4";
+        const CHAVE = "doninah@gmail.com";
+        const CIDADE = "FORTALEZA";
+        const NOME_EMISSOR = "DONINA H L SOUZA";
+        
+        const fbConfig = { 
+            apiKey: "", 
+            databaseURL: "https://dony-burguers-default-rtdb.firebaseio.com" 
+        };
+        firebase.initializeApp(fbConfig);
+        const db = firebase.database();
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; document.getElementById('installContainer').style.display = 'block'; });
+        function instalarApp() { if(deferredPrompt) { deferredPrompt.prompt(); deferredPrompt = null; document.getElementById('installContainer').style.display = 'none'; } }
+
         let montante = "", status = "TV", motorBT = null;
 
-        function showPOS(id) {
-            document.querySelectorAll('#pos-layer .camada').forEach(c => c.style.display = 'none');
+        db.ref('caixa_pagamento').on('value', snap => {
+            const info = snap.val();
+            if (info && info.status === "RECEBIDO" && (status === "PIX" || status === "WAIT")) {
+                confirmarFinal(info.valor);
+            }
+        });
+
+        function show(id) {
+            document.querySelectorAll('.camada').forEach(c => c.style.display = 'none');
             document.getElementById(id).style.display = 'flex';
         }
 
         function input(n) {
-            if(status === "OK") resetPOS();
+            if(status === "OK") reset();
             status = "DIG";
-            showPOS('tela-digito');
+            show('tela-digito');
             montante += n;
-            atualizarVisorPOS();
+            atualizarVisor();
         }
 
-        function atualizarVisorPOS() {
+        function atualizarVisor() {
             let val = (parseFloat(montante)/100) || 0;
             document.getElementById('v-grande').innerText = val.toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
         }
 
-        function apagarPOS() {
+        function apagar() {
             montante = montante.slice(0,-1);
-            if(!montante) resetPOS();
-            else atualizarVisorPOS();
+            if(!montante) reset();
+            else atualizarVisor();
         }
 
-        function resetPOS() {
+        function gatilhoBotaoAmarelo() {
+            if (status === "PIX") {
+                atualizarHelenaStatus("FORÇANDO CELEBRAÇÃO MANUAL...");
+                const valorVenda = (parseFloat(montante)/100).toFixed(2);
+                confirmarFinal(valorVenda);
+            } else {
+                apagar();
+            }
+        }
+
+        function reset() {
             montante = "";
             status = "TV";
-            showPOS('tela-logo');
+            show('tela-logo');
+            atualizarHelenaStatus("OPERACIONAL PRONTO");
+            
+            const v = document.getElementById('video-sucesso-pos');
+            v.pause();
+            v.src = "";
+            
+            db.ref('publicidade/prado_68/qr_venda_ativa').remove();
         }
 
-        function gerarPagamentoPOS() {
+        function gerarPagamento() {
             if(!montante) return;
-
-            // CONFIRMAÇÃO MANUAL DE PAGAMENTO (ENTRA SEGUNDA VEZ)
-            if (status === "PIX") {
-                const v = (parseFloat(montante)/100).toFixed(2);
-                confirmarFinalPOS(v);
-                return;
-            }
-
             status = "PIX";
-            showPOS('area-pix');
+            show('area-pix');
+            atualizarHelenaStatus("GERANDO PIX BACEN PADRÃO...");
+
             const v = (parseFloat(montante)/100).toFixed(2);
             document.getElementById('pix-valor-txt').innerText = "R$ " + v.replace('.',',');
 
-            // GERAÇÃO DO EMV COPIA E COLA REAL
-            const f = (id, val) => id + val.length.toString().padStart(2, '0') + val;
-            const merchant = f("26", f("00", "br.gov.bcb.pix") + f("01", CHAVE));
-            let payload = "000201" + merchant + "520400005303986" + f("54", v) + "5802BR" + f("59", EMISSOR.substring(0,25)) + f("60", CIDADE.substring(0,15)) + "62070503***6304";
+            db.ref('caixa_pagamento').set({ status: "AGUARDANDO", valor_aguardando: v.replace('.', ',') });
+
+            const formatField = (id, val) => {
+                const len = val.length.toString().padStart(2, '0');
+                return id + len + val;
+            };
+
+            const guiPix = formatField("00", "br.gov.bcb.pix") + formatField("01", CHAVE.trim());
+            const merchantAccount = formatField("26", guiPix);
             
+            const mcc = "52040000";
+            const moeda = "5303986"; 
+            const valorField = formatField("54", v);
+            const pais = "5802BR";
+            const nomeField = formatField("59", NOME_EMISSOR.substring(0, 25));
+            const cidadeField = formatField("60", CIDADE.substring(0, 15));
+            
+            const additionalData = formatField("05", "***");
+            const sub62 = formatField("62", additionalData);
+
+            let payload = "000201" + 
+                          merchantAccount + 
+                          mcc + 
+                          moeda + 
+                          valorField + 
+                          pais + 
+                          nomeField + 
+                          cidadeField + 
+                          sub62 + 
+                          "6304";
+
             let crc = 0xFFFF;
             for (let i = 0; i < payload.length; i++) {
                 crc ^= (payload.charCodeAt(i) << 8);
                 for (let j = 0; j < 8; j++) {
-                    if ((crc & 0x8000) !== 0) crc = (crc << 1) ^ 0x1021;
-                    else crc <<= 1;
+                    if ((crc & 0x8000) !== 0) {
+                        crc = (crc << 1) ^ 0x1021;
+                    } else {
+                        crc <<= 1;
+                    }
+                    crc &= 0xFFFF;
                 }
             }
-            let pixCode = payload + (crc & 0xFFFF).toString(16).toUpperCase().padStart(4, '0');
-            
+            let pixCode = payload + crc.toString(16).toUpperCase().padStart(4, '0');
+
             document.getElementById('payload-txt').innerText = pixCode;
-            document.getElementById('qr-code').innerHTML = "";
-            new QRCode(document.getElementById('qr-code'), { text: pixCode, width: 140, height: 140 });
+            const qrContainer = document.getElementById('qr-code');
+            qrContainer.innerHTML = "";
+
+            new QRCode(qrContainer, {
+                text: pixCode,
+                width: 130,
+                height: 130,
+                correctLevel: QRCode.CorrectLevel.M
+            });
+
+            setTimeout(() => {
+                atualizarHelenaStatus("CONVERTENDO QRCODE...");
+                html2canvas(document.getElementById('area-pix'), { 
+                    useCORS: true,
+                    allowTaint: true,
+                    scale: 1.2
+                }).then(canvas => {
+                    atualizarHelenaStatus("SINCRONIZANDO TV...");
+                    const qrBase64 = canvas.toDataURL('image/jpeg', 0.75);
+
+                    db.ref('publicidade/prado_68/qr_venda_ativa').set(qrBase64)
+                    .then(() => {
+                        atualizarHelenaStatus("TV SINCRONIZADA INSTANTÂNEO");
+                    }).catch(err => {
+                        atualizarHelenaStatus("ERRO DE SINCRONIZAÇÃO");
+                        console.error(err);
+                    });
+                });
+            }, 800);
         }
 
-        function confirmarFinalPOS(valorRecebido) {
+        async function iniciarLeituraNFC() {
+            if (!montante || montante === "") {
+                atualizarHelenaStatus("DIGITE O VALOR PRIMEIRO");
+                return;
+            }
+
+            if ('NDEFReader' in window) {
+                try {
+                    const ndef = new NDEFReader();
+                    await ndef.scan();
+                    atualizarHelenaStatus("APROXIME O CARTÃO NFC...");
+
+                    ndef.onreading = event => {
+                        const decoder = new TextDecoder();
+                        for (const record of event.records) {
+                            const dadosNFC = decoder.decode(record.data);
+                            console.log("Dado NFC Lido: ", dadosNFC);
+                        }
+                        const valorVenda = (parseFloat(montante)/100).toFixed(2);
+                        confirmarFinal(valorVenda);
+                    };
+                } catch (error) {
+                    alert("Erro ao iniciar NFC: " + error);
+                    atualizarHelenaStatus("FALHA NO HARDWARE NFC");
+                }
+            } else {
+                alert("Este dispositivo ou navegador não suporta leitura NFC via Web.");
+                atualizarHelenaStatus("NFC NÃO SUPORTADO");
+            }
+        }
+
+        function confirmarFinal(valorRecebido) {
             status = "OK";
-            tocarSomPOS();
-            
-            let valorFormatated = parseFloat(valorRecebido).toLocaleString('pt-BR', {
+            tocarSom();
+            atualizarHelenaStatus("CELEBRANDO COMPRA!");
+
+            let valorFormatado = parseFloat(valorRecebido).toLocaleString('pt-BR', {
                 style: 'currency',
                 currency: 'BRL'
             });
 
-            document.getElementById('confirmacao-valor').innerText = valorFormatated;
-            showPOS('tela-sucesso');
+            document.getElementById('confirmacao-valor').innerText = valorFormatado;
 
-            // Grava no histórico de Auditoria Local da máquina
+            let valorEsperado = parseFloat((parseFloat(montante)/100).toFixed(2));
+            if (parseFloat(valorRecebido) < valorEsperado) {
+                document.getElementById('confirmacao-valor').style.color = "red";
+                document.querySelector('#tela-sucesso p').innerText = "VALOR PARCIAL!";
+                document.querySelector('#tela-sucesso p').style.color = "red";
+            } else {
+                document.getElementById('confirmacao-valor').style.color = "var(--ouro)";
+                document.querySelector('#tela-sucesso p').innerText = "PAGO!";
+                document.querySelector('#tela-sucesso p').style.color = "var(--verde)";
+            }
+
+            const videoPos = document.getElementById('video-sucesso-pos');
+            videoPos.src = VIDEO_COMEMORACAO;
+            videoPos.play().catch(e => console.log(e));
+
+            show('tela-sucesso');
+
+            db.ref('publicidade/prado_68/qr_venda_ativa').set(VIDEO_COMEMORACAO);
+
             let hist = JSON.parse(localStorage.getItem('jdp_auditoria') || '[]');
             hist.push({ 
                 data: new Date().toLocaleString('pt-BR'), 
@@ -1603,13 +404,13 @@
             });
             localStorage.setItem('jdp_auditoria', JSON.stringify(hist));
 
-            // INTEGRAÇÃO DIRETA COM O DBJS
-            DBJS.registrarVendaPOS(valorRecebido);
-
             if(motorBT) imprimirTicket();
-            
-            // Retorna para a tela de logo da POS após 3 segundos
-            setTimeout(resetPOS, 3000);
+
+            setTimeout(reset, 12000);
+        }
+
+        function atualizarHelenaStatus(msg) {
+            document.getElementById('helena-status').innerHTML = `<span style="color: var(--azul);">HELENA: ${msg}</span>`;
         }
 
         async function conectarBT() {
@@ -1639,42 +440,25 @@
             });
         }
 
-        function abrirAuditoria() {
-            if(prompt("SENHA JDP:") === "1234") {
-                document.getElementById('modal-auditoria').style.display="flex";
-                renderizarAuditoria();
-            }
-        }
-
-        function fecharAuditoria() {
-            document.getElementById('modal-auditoria').style.display="none";
-        }
-
+        function abrirAuditoria() { if(prompt("SENHA JDP:") === "1234") { document.getElementById('modal-auditoria').style.display="flex"; renderizarAuditoria(); } }
+        function fecharAuditoria() { document.getElementById('modal-auditoria').style.display="none"; }
         function renderizarAuditoria() {
             let hist = JSON.parse(localStorage.getItem('jdp_auditoria') || '[]');
             let soma = hist.reduce((a, b) => a + parseFloat(b.valor.replace(',', '.')), 0);
             document.getElementById('lista-pix').innerHTML = hist.map(v => `<div>${v.data} - R$ ${v.valor}</div>`).reverse().join('');
             document.getElementById('soma-total').innerText = `TOTAL: R$ ${soma.toFixed(2).replace('.', ',')}`;
         }
+        function limparCaderno() { if(confirm("APAGAR TUDO?")) { localStorage.removeItem('jdp_auditoria'); renderizarAuditoria(); } }
+        function entrarFullScreen() { if (!document.fullscreenElement) document.documentElement.requestFullscreen(); }
+        function tocarSom() { const ctx = new AudioContext(); const osc = ctx.createOscillator(); osc.connect(ctx.destination); osc.start(); osc.stop(ctx.currentTime + 0.2); }
+    </script>
 
-        function limparCaderno() {
-            if(confirm("APAGAR TUDO?")) {
-                localStorage.removeItem('jdp_auditoria');
-                renderizarAuditoria();
-            }
-        }
-
-        function tocarSomPOS() {
-            try {
-                const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                const osc = ctx.createOscillator();
-                osc.connect(ctx.destination);
-                osc.start();
-                osc.stop(ctx.currentTime + 0.2);
-            } catch (e) {
-                console.warn("Falha ao tocar som POS:", e);
-            }
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js').then(reg => console.log('SISTEMA JDP: MOTOR ATIVO'));
+            });
         }
     </script>
 </body>
-    </html>
+</html>
